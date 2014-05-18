@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+  <head></head>
+  <body>
+    <div id=container></div>
+    <script id=container-template type="text/stache">
+      <h1>Distinct values display</h1>
+      <h3>compute1's value: {{compute1}}</h3>
+      <h3>compute2's value: {{compute2}}</h3>
+      <h3>Times changes: {{total}}</h3>
+      <h3>Most recent items:</h3>
+      <ul>
+        {{#each recent}}
+        <li>{{.}}
+        {{/each}}
+      </ul>
+    </script>
+    <script src=../bower_components/jquery/dist/jquery.js></script>
+    <script src=../bower_components/canjs/can.jquery.js></script>
+    <script src=../bower_components/bacon/dist/Bacon.js></script>
+    <script src=can.bacon.js></script>
+    <script src=sandbox.js></script>
+  </body>
+</html>
