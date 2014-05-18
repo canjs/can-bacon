@@ -59,13 +59,19 @@ function ListChangeEvent(args) {
   this.event = args[0];
   switch (this.event.type) {
   case "change":
-    this.index = args[1];
+    // NOTE: This gets a string as the index for all change events.
+    this.index = isNaN(args[1])?args[1]:+args[1];
     this.how = args[2];
     // We take the liberty of changing these semantics for remove events. Aside
     // from it being generally more convenient for filtering, this means that,
     // aside from `this.oldValue` being weird, binding to "change" and filtering
     // on `how` will give exactly equivalent results to just binding directly on
     // the specific event type.
+    //
+    // NOTE: when you `can.List#pop()` on an empty array, you get
+    // `[undefined]` as the value, whereas splicing an empty array gets you
+    // `[]` as the value.
+    // See https://github.com/bitovi/canjs/issues/998
     this.value = this.how === "remove" ? args[4] : args[3];
     // This is only ever of interest for set events (we never spit out
     // ListChangeEvent for length events)
