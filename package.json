@@ -1,0 +1,35 @@
+{
+  "name": "can.bacon",
+  "version": "0.0.0",
+  "description": "Bacon.js integration for CanJS",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/zkat/can.bacon"
+  },
+  "keywords": [
+    "bacon",
+    "frp",
+    "can",
+    "canjs",
+    "reactive"
+  ],
+  "author": "Kat Marchán <kzm@sykosomatic.org>",
+  "license": "CC0",
+  "bugs": {
+    "url": "https://github.com/zkat/can.bacon/issues"
+  },
+  "homepage": "https://github.com/zkat/can.bacon",
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "webpack": "^1.1.11",
+    "webpack-dev-server": "^1.2.7",
+    "grunt-webpack": "^1.0.6",
+    "grunt-mocha-test": "^0.10.2",
+    "execSync": "^1.0.1-pre",
+    "transform-loader": "^0.2.0"
+  }
+}
