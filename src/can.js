@@ -16,22 +16,75 @@ can.bindAndSetup = function(ev, cb) {
 };
 can.Map.prototype.bind = can.bindAndSetup;
 can.Map.prototype.getEventValueForBacon = function(args) {
-  if (args.length === 2 || args.length === 3) {
-    return args[1];
-  } else if (args.length === 5) {
-    return new MapEvent(args);
-  } else {
-    console.warn("Unexpected event shape: ", args);
-    return new MapEvent(args);
+  switch (args[0] && args[0].type) {
+  case "change":
+    return new MapChangeEvent(args);
+  default:
+    var target = args[0].target;
+    if (target._data && target._data.hasOwnProperty(args[0].type)) {
+      // We found a named property change event, not a generic custom event
+      // (maybe, probably)
+      return args[1];
+    } else {
+      // If we don't know what the event is, return the arguments as-is
+      return args;
+    }
   }
 };
 
-function MapEvent(args) {
-  this.type = args[0].type;
-  this.batchNum = args[0].batchNum;
-  this.target = args[0].target;
-  this.verb = args[1];
-  this.value = args[2];
+function MapChangeEvent(args) {
+  this.event = args[0];
+  this.which = args[1];
+  this.how = args[2];
+  this.value = args[3];
+  this.oldValue = args[4];
+}
+
+// http://canjs.com/docs/can.List.prototype.attr.html#section_Events
+can.List.prototype.getEventValueForBacon = function(args) {
+  switch (args[0] && args[0].type) {
+  case "change":
+  case "set":
+  case "add":
+  case "remove":
+    return new ListChangeEvent(args);
+  case "length":
+    return args[1];
+  default:
+    return args;
+  }
+};
+
+function ListChangeEvent(args) {
+  this.event = args[0];
+  switch (this.event.type) {
+  case "change":
+    this.index = args[1];
+    this.how = args[2];
+    // We take the liberty of changing these semantics for remove events. Aside
+    // from it being generally more convenient for filtering, this means that,
+    // aside from `this.oldValue` being weird, binding to "change" and filtering
+    // on `how` will give exactly equivalent results to just binding directly on
+    // the specific event type.
+    this.value = this.how === "remove" ? args[4] : args[3];
+    // This is only ever of interest for set events (we never spit out
+    // ListChangeEvent for length events)
+    this.oldValue = args[4];
+    break;
+  case "set":
+  case "add":
+  case "remove":
+    this.index = args[2];
+    this.how = this.event.type;
+    // NOTE: The docs say that this can be either one, or many things. I can
+    // only seem to get arrays out of this event, though.
+    this.value = args[1];
+    // NOTE: These events do not include oldValue.
+    this.oldValue = null;
+    break;
+  default:
+    throw new Error("Unexpected can.List event: "+this.event.type);
+  }
 }
 
 function toBaconObservable(ctx, ev) {
