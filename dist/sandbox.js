@@ -2,14 +2,28 @@ var compute1 = can.compute(1),
     property1 = compute1.bind(),
     compute2 = property1.toCanCompute(),
     property2 = compute2.bind(),
-    recent = property1.slidingWindow(15),
+    recentLimit = 5,
+    recentChanges = property1.scan({count:0}, function(acc, val) {
+      return {count: acc.count+1, value: val};
+    }).withHandler(function(event) {
+      var acc = event.value(),
+          ret = this.push(new Bacon.Next({
+            how: "add",
+            index: Math.min(recentLimit, acc.count-1),
+            value: [acc.value]
+          }));
+      if (acc.count > recentLimit) {
+        ret = this.push(new Bacon.Next({how: "remove", index: 0}));
+      }
+      return ret;
+    }),
     total = property2.map(1).scan(0, function(a, b) {return a+b;});
 
 property2.onValue(compute1);
 
 property1.log("property");
 property2.log("property2");
-recent.log("recent");
+recentChanges.log("recentChanges");
 total.log("total");
 
 var map1 = new can.Map({a:1,b:2});
@@ -29,6 +43,6 @@ list2.bind().log("list2 changed");
 $("#container").html(can.view("#container-template", {
   compute1: compute1,
   compute2: compute2,
-  recent: recent.toCanCompute(),
+  recent: recentChanges.toCanList(),
   total: total.toCanCompute()
 }));
