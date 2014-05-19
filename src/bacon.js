@@ -111,8 +111,9 @@ function syncAsList(list, val) {
       list.attr(val.index, val.value);
       break;
     case "add":
-      // TODO - is there any way to support two-way binding with this working
-      // the way it does?... Probably not without hacking Can internals.
+      // TODO - tag lists and/or events with some magical number (like.. a
+      // batchnum-style thing) to prevent circular additions when two-way
+      // binding. Please name it: "___PRAISE_THE_SUN___"
       list.splice.apply(list, [val.index, 0].concat(val.value));
       break;
     case "remove":

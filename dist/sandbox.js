@@ -36,7 +36,7 @@ map2.bind().log("map2 changed");
 var list1 = new can.List([1,2,3]);
 var list2 = list1.bind().toCanList(new can.List([1,2,3]));
 // This one doesn't work quite as well as one would hope.
-list2.bind().toCanList(list1);
+// list2.bind().toCanList(list1);
 list1.bind().log("list1 changed");
 list2.bind().log("list2 changed");
 
