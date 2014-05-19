@@ -214,7 +214,20 @@ can.List.prototype.getEventValueForBacon = function(args) {
   case "length":
     return args[1];
   default:
-    return args;
+    // This is different from the can.Map version because can.Lists don't have
+    // the _data property.
+    var target = args[0].target;
+    var _type = args[0].type;
+    if (target.hasOwnProperty(args[0].type)) {
+      // We found a named property change event, not a generic custom event
+      // (maybe, probably).
+      // TODO - change the semantics here to check for integers. Floats should
+      // be treated as string keys.
+      return isNaN(_type) ? args[1] : args[1][0];
+    } else {
+      // If we don't know what the event is, return the arguments as-is
+      return args;
+    }
   }
 };
 
@@ -257,7 +270,7 @@ function ListChangeEvent(args) {
 }
 
 function toBaconObservable(ctx, ev) {
-  ev = ev || "change";
+  ev = ev == null ? "change" : ev;
   var stream = bacon.fromBinder(function(sink) {
     function cb() {
       sink(new bacon.Next(chooseEventData(ctx, arguments)));
