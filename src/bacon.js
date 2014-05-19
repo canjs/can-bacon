@@ -117,7 +117,7 @@ function syncAsList(list, val) {
       break;
     case "remove":
       list.splice(Math.min(val.index, !list.length?0:list.length-1),
-                  val.value.length);
+                  val.value ? val.value.length : 1);
       break;
     case "replace":
       if (val.hasOwnProperty("removeOthers")) {
