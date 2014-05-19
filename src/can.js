@@ -2,18 +2,123 @@ module bacon from "bacon";
 module can from "can";
 
 var oldBind = can.bind;
+/**
+ * Extends `can.bind()` such that if it's called with only one argument (the
+ * event name), or without any arguments, a `Bacon.EventStream` object is
+ * created, instead of binding a callback to the event.
+ *
+ * The actual event values sent into the `EventStream` will vary depending on
+ * the observed value.
+ *
+ * See http://canjs.com/docs/can.bind.html for documentation on the default
+ * behavior.
+ *
+ * @param {String} [event="change"] - Name of event to hook up to
+ * @param {Function} [callback] - Callback to invoke when event fires. If this
+ * parameter is provided, an `EventStream` will not be returned.
+ *
+ * @returns EventStream | Any
+ *
+ * @example
+ * can.bind.call(new can.Map(), "change").map(".value").log();
+ *
+ */
 can.bind = function(ev, cb) {
   return cb ?
     oldBind.apply(this, arguments) :
     toBaconObservable(this, ev);
 };
 
+/**
+ * @function can.compute#bind
+ *
+ * Replaces the default CanJS behavior of the `can.compute#bind()` method with
+ * one that returns an `EventStream` of new `can.compute` values, if no
+ * `callback` is provided to the `.bind()` call. If the `callback` is present,
+ * this method reverts to the standard behavior of binding an event listener
+ * directly.
+ *
+ * @param {String} [event="change"] - Name of event to hook up to
+ * @param {Function} [callback] - Callback to invoke when event fires. If this
+ * parameter is provided, an `EventStream` will not be returned.
+ *
+ * @returns EventStream | Computed
+ *
+ * @example
+ * var compute = can.compute(1);
+ * compute.bind().log("compute changed");
+ * compute(2);
+ * // compute changed 2
+ */
+
+
 var oldBindAndSetup = can.bindAndSetup;
+// Mostly internal, but used to replace the `.bind()` behavior for all
+// Observables in Can.
 can.bindAndSetup = function(ev, cb) {
   return cb ?
     oldBindAndSetup.apply(this, arguments) :
     toBaconObservable(this, ev);
 };
+
+/**
+ * Replaces the default CanJS behavior of the `can.Map#bind()` method with one
+ * that returns an `EventStream` of event objects or values if the `callback`
+ * argument is not provided.
+ *
+ * The values in `EventStream` vary depending on the event being listened to.
+ *
+ * For named property events, the new value of the property is returned, as-is.
+ *
+ * For `"change"` events, `MapChangeEvent` objects are returned, with the
+ * following properties:
+ *
+ * {
+ *   event: Object // The CanJS event object.
+ *   which: String // They attr/key affected by the event,
+ *   how: "add"|"remove"|"set" // The type of operation,
+ *   value: Any // For "add"/"set" events, the new value. For "remove" events,
+ *                 the removed value.
+ * }
+ *
+ * Note that this object fits the API required for `Bacon.toCanMap`, so the
+ * `EventStream` returned by this function can be piped into a different
+ * `can.Map` to partially or fully synchronise both maps.
+ *
+ * Additionally, The events from that `Map` changing can then be piped back into
+ * the original `Map` without causing circularity issues, achieving two-way
+ * binding between both objects. See example.
+ *
+ * @param {String} [event="change"] - Name of event to hook up to
+ * @param {Function} [callback] - Callback to invoke when event fires. If this
+ * parameter is provided, an `EventStream` will not be returned.
+ *
+ * @returns EventStream | `this`
+ *
+ * @example
+ * // Binding
+ * var map = new can.Map({x:1});
+ * map.bind().log("map changed:");
+ * map.bind("x").log("x property changed:");
+ * map.attr("x", 2);
+ * // map changed: {event: Object, which: "x", "how": "set", value: 2}
+ * // x property changed: 2
+ *
+ * // Piping into a different Map
+ * var map1 = new can.Map();
+ * var map2 = map1.bind().toCanMap(new can.Map());
+ * map1.bind().log("map1 changed:");
+ * map2.bind().log("map2 changed:");
+ *
+ * map1.attr("x", 1);
+ * // map2 changed: {event: Object, which: "x", "how": "add", value:1}
+ * // map1 changed: {event: Object, which: "x", "how": "add", value:1}
+ * map2.attr("x", 2);
+ * // map1 changed: {event: Object, which: "x", "how": "set", value:2}
+ * // map2 changed: {event: Object, which: "x", "how": "set", value:2}
+ * console.log(map1.attr(), map2.attr());
+ * // {x:2}, {x:2}
+ */
 can.Map.prototype.bind = can.bindAndSetup;
 can.Map.prototype.getEventValueForBacon = function(args) {
   switch (args[0] && args[0].type) {
@@ -37,10 +142,68 @@ function MapChangeEvent(args) {
   this.which = args[1];
   this.how = args[2];
   this.value = args[3];
+  // This isn't documented because I want to pretend it doesn't exist :)
   this.oldValue = args[4];
 }
 
-// http://canjs.com/docs/can.List.prototype.attr.html#section_Events
+/**
+ * @function can.List#bind
+ *
+ * Replaces the default CanJS behavior of the `can.List#bind()` method with one
+ * that returns an `EventStream` of event objects or values if the `callback`
+ * argument is not provided.
+ *
+ * The values in `EventStream` vary depending on the event being listened to.
+ *
+ * For named property events, the new value of the property is returned,
+ * as-is. Both numerical properties (indices) and regular Map attrs can be
+ * bound to.
+ *
+ * For the `"length"` events, the new length of the array is returned as-is.
+ *
+ * The rest of the events, namely `"change"`, `"add"`, `"remove"`, and `"set"`,
+ * either `ListChangeEvent` or `MapChangeEvent` objects are returned from the
+ * stream, depending on whether the modification involves a numerical key.
+
+ * For events on numerical properties, `ListChangeEvent` objects are returned,
+ * with the following properties:
+ *
+ * {
+ *   event: Object // The CanJS event object.
+ *   index: Integer // They initial index of the change.
+ *   how: "add"|"remove"|"set" // The type of operation,
+ *   value: Array | Any // For "add" events, an array of added items.
+ *                         For "remove" events, an array of removed items.
+ *                         For "set", the single new value.
+ * }
+ *
+ * For events on non-numerical properties, `MapChangeEvent` objects are
+ * returned, using the same structure as `can.Map#bind()`:
+ *
+ * {
+ *   event: Object // The CanJS event object.
+ *   which: String // They attr/key affected by the event,
+ *   how: "add"|"remove"|"set" // The type of operation,
+ *   value: Any // For "add"/"set" events, the new value. For "remove" events,
+ *                 the removed value.
+ * }
+ *
+ * Note that these objects conform to the API required for `Bacon.toCanList` and
+ * `Bacon.toCanMap` respectively, so the `EventStream` returned by this function
+ * can be piped into a different `can.List` or `can.Map` to synchronise both.
+ *
+ * Unlike the stream returned by `can.Map#bind()`, this one cannot be used for
+ * two-way binding out of the box, since `add` events will bounce back and forth
+ * infinitely and cause an overflow. One-way binding works fine, though, and can
+ * easily handle lists of different lengths.
+ *
+ * @param {String} [event="change"] - Name of event to hook up to
+ * @param {Function} [callback] - Callback to invoke when event fires. If this
+ * parameter is provided, an `EventStream` will not be returned.
+ *
+ * @returns EventStream | `this`
+ *
+ */
 can.List.prototype.getEventValueForBacon = function(args) {
   switch (args[0] && args[0].type) {
   case "change":

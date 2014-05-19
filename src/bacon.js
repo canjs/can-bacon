@@ -77,8 +77,9 @@ function syncAsMap(map, val) {
  * // Modification event. Modifies a single index or key.
  * {
  *   how: "set"|"add"|"remove", // The type of operation.
- *   which: String, // The key to modify.
- *   value: Any, // The value to set. Optional for `remove`.
+ *   which: String|Integer, // The key to modify.
+ *   value: Any, // The value to set. For "add" on an Integer index, must be an
+ *                  Array-like. Optional for `remove`.
  * }
  *
  * // Replacement event. Calls `.replace()`
