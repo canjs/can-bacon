@@ -1,9 +1,39 @@
 <!doctype html>
 <html>
-  <head></head>
+  <head>
+    <style>
+      drag-drop-demo {
+        display: block;
+        position: relative;
+        height: 500px;
+        width: 500px;
+        border: 1px solid black;
+      }
+      drag-drop-demo .draggable-box {
+        display: block;
+        position: absolute;
+        height: 100px;
+        width: 100px;
+        background-color: hotpink;
+        cursor: pointer;
+        text-align: center;
+        line-height: 100px;
+      }
+      .drag-drop-demo-dragging {
+	    -webkit-touch-callout: none;
+	    -webkit-user-select: none;
+	    -khtml-user-select: none;
+	    -moz-user-select: none;
+	    -ms-user-select: none;
+	    user-select: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
   <body>
     <div id=container></div>
     <script id=container-template type="text/stache">
+      <drag-drop-demo></drag-drop-demo>
       <h1>Distinct values display</h1>
       <h3>compute1's value: {{compute1}}</h3>
       <h3>compute2's value: {{compute2}}</h3>
@@ -12,8 +42,14 @@
       <ul>
         {{#each recent}}
         <li>{{.}}
-        {{/each}}
+          {{/each}}
       </ul>
+    </script>
+    <script id=drag-drop-demo-tpl type=text/mustache>
+      <div class=draggable-box style="left: {{boxPosition.x}}px; top:
+                                      {{boxPosition.y}}px">
+        ({{boxPosition.x}},{{boxPosition.y}})
+      </div>
     </script>
     <script src=../bower_components/jquery/dist/jquery.js></script>
     <script src=../bower_components/canjs/can.jquery.js></script>
