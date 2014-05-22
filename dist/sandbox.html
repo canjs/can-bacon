@@ -32,8 +32,7 @@
   </head>
   <body>
     <div id=container></div>
-    <script id=container-template type="text/stache">
-      <drag-drop-demo></drag-drop-demo>
+    <script id=container-template type=text/stache>
       <h1>Distinct values display</h1>
       <h3>compute1's value: {{compute1}}</h3>
       <h3>compute2's value: {{compute2}}</h3>
@@ -45,14 +44,14 @@
           {{/each}}
       </ul>
     </script>
-    <script id=drag-drop-demo-tpl type=text/mustache>
-      <div class=draggable-box style="left: {{boxPosition.x}}px; top:
-                                      {{boxPosition.y}}px">
+    <script id=drag-drop-demo-tpl type=text/stache>
+      <div class=draggable-box style="left: {{boxPosition.x}}px; top: {{boxPosition.y}}px">
         ({{boxPosition.x}},{{boxPosition.y}})
       </div>
     </script>
     <script src=../bower_components/jquery/dist/jquery.js></script>
     <script src=../bower_components/canjs/can.jquery.js></script>
+    <script src=../bower_components/canjs/can.stache.js></script>
     <script src=../bower_components/bacon/dist/Bacon.js></script>
     <script src=can.bacon.js></script>
     <script src=sandbox.js></script>
