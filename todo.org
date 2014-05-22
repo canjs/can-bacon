@@ -1,0 +1,19 @@
+* archive [0/0]
+* backlog [0/9]
+** TODO set up test suite                                                :qa:
+** TODO Generate docs                                                   :dox:
+** TODO TodoMVC                                                         :dox:
+** TODO Easier/nicer way to manually create events                      :api:
+** TODO Two-way binding of Lists                                        :api:
+** TODO Improve can.List getEventValue semantics                        :api:
+   Properly detect whether an index/attr observer is going to get the right
+   value back.
+** TODO Don't initialize compute properties if compute has no init val  :api:
+** TODO Easy, single-command deployment                               :build:
+** TODO Test using Travis-ci                                             :qa:
+* active [2/4]
+** DONE Write README.md                                                 :dox:
+   CLOSED: [2014-05-21 Wed 22:40]
+** DONE Run a first release                                           :build:
+   CLOSED: [2014-05-21 Wed 22:41]
+** TODO Deploy to npm and bower for the first tiem                    :build:
