@@ -1,6 +1,7 @@
 # can.bacon
 
-`can.bacon` is [hosted at Github](http://github.com/zkat/can.bacon). `mona` is a
+`can.bacon` is
+[hosted at Github](http://github.com/zkat/can.bacon). `can.bacon` is a
 public domain work, dedicated using
 [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Feel free to do
 whatever you want with it.
@@ -9,54 +10,43 @@ whatever you want with it.
 
 ### Install
 
-`$ npm install cond`
+`$ npm install can.bacon`
 or
-`$ bower install cond`
+`$ bower install can.bacon`
+
+Prebuilt releases are included in `dist`. Releases tagged as `full` include
+`Bacon`, `jQuery`, and `CanJS` in a single package. The others expect the other
+libraries to have already been loaded.
 
 ### Example
 
-Execute the following in a browser session, with developer tools open, and
-follow the instructions:
-
 ```javascript
+var compute = can.compute(),
+    property = compute.bind();
 
-var availableFlavors = ["chocolate", "vanilla", "mint chocolate chip"];
-function getIceCream(flavor) {
-    if (availableFlavors.indexOf(flavor) !== -1) {
-        return flavor + " ice cream ゲットー!";
-    } else {
-        // Just like throw new Error("something"), but we provide a way
-        // the user can recover from it.
-        return cond.error("Sorry, that flavor is not available", [
-            "different-flavor", "Try a different flavor", getIceCream
-        ], [
-            "add-flavor", "Add this flavor to available ones and retry", function() {
-                availableFlavors.push(flavor);
-                return getIceCream(flavor);
-            }
-        ]);
-    }
-}
+property.log("Property has new value:");
 
-console.log(getIceCream("coffee"));
-console.log("I really like this flavor!");
+compute(1);
 
-// In the console, do:
+property.toCanCompute().bind("change", function() {
+  console.log("compute updated from property change.");
+});
 
-// > showRecoveries();
-// > recover(0, "chocolate");
+compute(2);
 
-// You can also access recoveries programmatically:
-console.log(cond.handlerBind(function() {
-    return getIceCream("bubblegum");
-}, [Error, function(e) { return cond.recover("add-flavor"); }]));
 ```
 
 # Introduction
 
-`cond` is a JavaScript implementation of
-[Common Lisp's condition system](http://gigamonkeys.com/book/beyond-exception-handling-conditions-and-restarts.html),
-a system for handling errors and other conditions of interest that handles
-signals at the call site, before the stack is unwound -- allowing you to repair
-or alter what happens at the callsite, and continuing executing as if nothing
-had been signaled/thrown.
+`can.bacon` is a [CanJS](https://github.com/bitovi/canjs) plugin that lets you
+create [Bacon.js](https://github.com/baconjs/bacon.js) `EventStream`s and
+`Property`s from `CanJS` event handlers, as well as feed `Bacon` observable
+streams back into `CanJS` observables. The result is a delicious,
+canned-bacon-flavored mix of
+[FRP](https://en.wikipedia.org/wiki/Functional_reactive_programming) and
+`CanJS`-style declarative MVC.
+
+Check out `dist/sandbox.html` and `dist/sandbox.js` for some rough usage
+examples, including a fairly short drag-and-drop demo using `can.Component`, and
+super-simple, single-line two-way binding between pairs of computes and pairs of
+`can.Map`s. More documentation and test suite work is forthcoming.
