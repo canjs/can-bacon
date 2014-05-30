@@ -1,6 +1,6 @@
 {
   "name": "can.bacon",
-  "version": "0.0.1-2",
+  "version": "0.0.2",
   "description": "Bacon.js integration for CanJS",
   "main": "index.js",
   "scripts": {
