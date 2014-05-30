@@ -72,7 +72,7 @@ can.delegate = function(selector, ev, cb) {
   if (this instanceof bacon.Observable) {
     return this;
   } else if (cb) {
-    return oldBind.apply(this, arguments);
+    return oldDelegate.apply(this, arguments);
   } else {
     return toBaconObservable(this, ev, selector);
   }
