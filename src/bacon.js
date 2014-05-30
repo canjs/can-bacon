@@ -6,8 +6,7 @@ module can from "can";
  * changes. If a compute is provided, it will be used instead of creating a new
  * one.
  */
-bacon.Observable.prototype.toCanCompute = function(compute) {
-  compute = compute || can.compute();
+bacon.Observable.prototype.toCanCompute = function(compute=can.compute()) {
   this.onValue(compute);
   return compute;
 };
@@ -36,8 +35,7 @@ bacon.Observable.prototype.toCanCompute = function(compute) {
  *   removeOthers: Boolean // Passed to `.attr()`. See http://canjs.com/docs/can.Map.prototype.attr.html#sig_map_attr_obj__removeOthers__
  * }
  */
-bacon.Observable.prototype.toCanMap = function(map) {
-  map = map || new can.Map();
+bacon.Observable.prototype.toCanMap = function(map=new can.Map()) {
   this.onValue((val)=>syncAsMap(map, val));
   return map;
 };
@@ -56,6 +54,10 @@ function syncAsMap(map, val) {
     break;
   case "replace":
     map.attr(val.value, val.removeOthers);
+    break;
+  case undefined:
+    console.warn("Missing event type on change event: ", val);
+    map.attr(val);
     break;
   default:
     console.warn("Unexpected event type: ", val.how);
@@ -96,8 +98,7 @@ function syncAsMap(map, val) {
  *                                            http://canjs.com/docs/can.List.prototype.attr.html#sig_list_attr_elements__replaceCompletely__
  * }
  */
-bacon.Observable.prototype.toCanList = function(list) {
-  list = list || new can.List();
+bacon.Observable.prototype.toCanList = function(list=new can.List()) {
   this.onValue((val)=>syncAsList(list, val));
   return list;
 };
@@ -127,6 +128,10 @@ function syncAsList(list, val) {
       } else {
         list.replace(val.value);
       }
+      break;
+    case undefined:
+      console.warn("Missing event type on change event: ", val);
+      list.replace(val.value);
       break;
     default:
       console.warn("Unexpected event type: ", val.how);
