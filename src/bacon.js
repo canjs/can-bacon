@@ -56,6 +56,7 @@ function syncAsMap(map, val) {
     break;
   case "replace":
     map.attr(val.value, val.removeOthers);
+    break;
   default:
     console.warn("Unexpected event type: ", val.how);
     // idk you're giving it to me so I'll shove it in. It's your own fault
@@ -126,6 +127,7 @@ function syncAsList(list, val) {
       } else {
         list.replace(val.value);
       }
+      break;
     default:
       console.warn("Unexpected event type: ", val.how);
       // idk you're giving it to me so I'll shove it in. It's your own fault
