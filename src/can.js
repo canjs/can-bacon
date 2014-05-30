@@ -29,6 +29,13 @@ can.bind = function(ev, cb) {
     toBaconObservable(this, ev);
 };
 
+var oldDelegate = can.delegate;
+can.delegate = function(selector, ev, cb) {
+  return cb ?
+    oldDelegate.apply(this, arguments) :
+    toBaconObservable(this, ev, selector);
+};
+
 /**
  * @function can.compute#bind
  *
@@ -269,14 +276,18 @@ function ListChangeEvent(args) {
   }
 }
 
-function toBaconObservable(ctx, ev) {
+function toBaconObservable(ctx, ev, selector) {
   ev = ev == null ? "change" : ev;
   var stream = bacon.fromBinder(function(sink) {
     function cb() {
       sink(new bacon.Next(chooseEventData(ctx, arguments)));
     }
-    ctx.bind(ev, cb);
-    return ()=>ctx.unbind(ev, cb);
+    selector ?
+      can.delegate.call(ctx, selector, ev, cb) :
+      can.bind.call(ctx, ev, cb);
+    return ()=>selector ?
+      can.undelegate.call(ctx, selector, ev, cb) :
+      can.unbind.call(ctx, ev, cb);
   });
   if (ctx.isComputed) {
     // Computes are a special case in the sense that it's fairly involved to set
