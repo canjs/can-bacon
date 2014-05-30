@@ -68,15 +68,56 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 	var __moduleName = "src/can";
-	var bacon = __webpack_require__(4);
-	var can = __webpack_require__(3);
+	var bacon = __webpack_require__(3);
+	var can = __webpack_require__(4);
 	var oldBind = can.bind;
 	can.bind = function(ev, cb) {
-	  return cb ? oldBind.apply(this, arguments) : toBaconObservable(this, ev);
+	  if (this instanceof bacon.Observable) {
+	    return this;
+	  } else if (cb) {
+	    return oldBind.apply(this, arguments);
+	  } else {
+	    return toBaconObservable(this, ev);
+	  }
+	};
+	var oldDelegate = can.delegate;
+	can.delegate = function(selector, ev, cb) {
+	  if (this instanceof bacon.Observable) {
+	    return this;
+	  } else if (cb) {
+	    return oldDelegate.apply(this, arguments);
+	  } else {
+	    return toBaconObservable(this, ev, selector);
+	  }
 	};
 	var oldBindAndSetup = can.bindAndSetup;
 	can.bindAndSetup = function(ev, cb) {
 	  return cb ? oldBindAndSetup.apply(this, arguments) : toBaconObservable(this, ev);
+	};
+	var oldControlOn = can.Control.prototype.on;
+	can.Control.prototype.on = function(ctx, selector, eventName, func) {
+	  if (!ctx) {
+	    return oldControlOn.apply(this, arguments);
+	  }
+	  if (ctx instanceof bacon.Observable) {
+	    return ctx.takeUntil(can.bind.call(this, "destroyed"));
+	  }
+	  if (typeof ctx === "string") {
+	    func = eventName;
+	    eventName = selector;
+	    selector = ctx;
+	    ctx = this.element;
+	  }
+	  if (func == null) {
+	    func = eventName;
+	    eventName = selector;
+	    selector = null;
+	  }
+	  if (func == null) {
+	    return toBaconObservable(ctx, eventName, selector).takeUntil(can.bind.call(this, "destroyed"));
+	  } else {
+	    return oldControlOn.apply(this, arguments);
+	  }
 	};
 	can.Map.prototype.bind = can.bindAndSetup;
 	can.Map.prototype.getEventValueForBacon = function(args) {
@@ -139,15 +180,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	      throw new Error("Unexpected can.List event: " + this.event.type);
 	  }
 	}
-	function toBaconObservable(ctx, ev) {
+	function toBaconObservable(ctx, ev, selector) {
 	  ev = ev == null ? "change" : ev;
 	  var stream = bacon.fromBinder(function(sink) {
 	    function cb() {
 	      sink(new bacon.Next(chooseEventData(ctx, arguments)));
 	    }
-	    ctx.bind(ev, cb);
+	    selector ? can.delegate.call(ctx, selector, ev, cb) : can.bind.call(ctx, ev, cb);
 	    return (function() {
-	      return ctx.unbind(ev, cb);
+	      return selector ? can.undelegate.call(ctx, selector, ev, cb) : can.unbind.call(ctx, ev, cb);
 	    });
 	  });
 	  if (ctx.isComputed) {
@@ -163,7 +204,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  } else if (ctx.getEventValueForBacon) {
 	    return ctx.getEventValueForBacon(eventArgs, evName);
 	  } else {
-	    return [].slice.call(eventArgs);
+	    return eventArgs[0];
 	  }
 	}
 	
@@ -175,15 +216,15 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	"use strict";
 	var __moduleName = "src/bacon";
-	var bacon = __webpack_require__(4);
-	var can = __webpack_require__(3);
-	bacon.Observable.prototype.toCanCompute = function(compute) {
-	  compute = compute || can.compute();
+	var bacon = __webpack_require__(3);
+	var can = __webpack_require__(4);
+	bacon.Observable.prototype.toCanCompute = function() {
+	  var compute = arguments[0] !== (void 0) ? arguments[0] : can.compute();
 	  this.onValue(compute);
 	  return compute;
 	};
-	bacon.Observable.prototype.toCanMap = function(map) {
-	  map = map || new can.Map();
+	bacon.Observable.prototype.toCanMap = function() {
+	  var map = arguments[0] !== (void 0) ? arguments[0] : new can.Map();
 	  this.onValue((function(val) {
 	    return syncAsMap(map, val);
 	  }));
@@ -203,13 +244,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	      break;
 	    case "replace":
 	      map.attr(val.value, val.removeOthers);
+	      break;
+	    case undefined:
+	      console.warn("Missing event type on change event: ", val);
+	      map.attr(val);
+	      break;
 	    default:
 	      console.warn("Unexpected event type: ", val.how);
 	      map.attr(val);
 	  }
 	}
-	bacon.Observable.prototype.toCanList = function(list) {
-	  list = list || new can.List();
+	bacon.Observable.prototype.toCanList = function() {
+	  var list = arguments[0] !== (void 0) ? arguments[0] : new can.List();
 	  this.onValue((function(val) {
 	    return syncAsList(list, val);
 	  }));
@@ -236,6 +282,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	        } else {
 	          list.replace(val.value);
 	        }
+	        break;
+	      case undefined:
+	        console.warn("Missing event type on change event: ", val);
+	        list.replace(val.value);
+	        break;
 	      default:
 	        console.warn("Unexpected event type: ", val.how);
 	        list.replace(val.value);
@@ -247,18 +298,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 /***/ },
 /* 3 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
-	var __moduleName = "bower_components/canjs/amd/can";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(8), __webpack_require__(5), __webpack_require__(9), __webpack_require__(6)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
-	  return can;
-	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	
-
-
-/***/ },
-/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/* WEBPACK VAR INJECTION */(function(module, global) {module.exports = function() {
@@ -3216,6 +3255,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(12)(module), (function() { return this; }())))
 
 /***/ },
+/* 4 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
+	var __moduleName = "bower_components/canjs/amd/can";
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(8), __webpack_require__(5), __webpack_require__(9), __webpack_require__(6)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	  return can;
+	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	
+
+
+/***/ },
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -3846,7 +3897,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/util/library";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(25)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(20)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  return can;
 	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	
@@ -3896,7 +3947,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/mustache";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(20), __webpack_require__(21), __webpack_require__(22), __webpack_require__(23), __webpack_require__(24)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(21), __webpack_require__(22), __webpack_require__(23), __webpack_require__(24), __webpack_require__(25)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  can.view.ext = ".mustache";
 	  var SCOPE = 'scope',
 	      HASH = '___h4sh',
@@ -4376,7 +4427,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/callbacks";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(21)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(22)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var attr = can.view.attr = function(attributeName, attrHandler) {
 	    if (attrHandler) {
 	      if (typeof attributeName === "string") {
@@ -4456,7 +4507,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/control";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(27)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(26)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var bind = function(el, ev, callback) {
 	    can.bind.call(el, ev, callback);
 	    return function() {
@@ -4642,7 +4693,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/observe";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(17), __webpack_require__(18), __webpack_require__(23)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(17), __webpack_require__(18), __webpack_require__(24)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  can.Observe = can.Map;
 	  can.Observe.startBatch = can.batch.start;
 	  can.Observe.stopBatch = can.batch.stop;
@@ -4871,7 +4922,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/map";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(28), __webpack_require__(29), __webpack_require__(27), __webpack_require__(30)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, bind, bubble) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(27), __webpack_require__(28), __webpack_require__(26), __webpack_require__(29)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, bind, bubble) {
 	  var madeMap = null;
 	  var teardownMap = function() {
 	    for (var cid in madeMap) {
@@ -5276,7 +5327,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/list";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(17), __webpack_require__(29)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, Map, bubble) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(17), __webpack_require__(28)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, Map, bubble) {
 	  var splice = [].splice,
 	      spliceRemovesProps = (function() {
 	        var obj = {
@@ -5508,7 +5559,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/route";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(17), __webpack_require__(18), __webpack_require__(31)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(17), __webpack_require__(18), __webpack_require__(35)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var matcher = /\:([\w\.]+)/g,
 	      paramsMatcher = /^(?:&[^=]+=[^&]*)+/,
 	      makeProps = function(props) {
@@ -5805,8 +5856,219 @@ return /******/ (function(modules) { // webpackBootstrap
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
+	var __moduleName = "bower_components/canjs/amd/can/util/jquery";
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(40), __webpack_require__(31), __webpack_require__(32), __webpack_require__(33), __webpack_require__(39), __webpack_require__(34)], __WEBPACK_AMD_DEFINE_RESULT__ = (function($, can, attr, event) {
+	  var isBindableElement = function(node) {
+	    return (node.nodeName && (node.nodeType === 1 || node.nodeType === 9)) || node == window;
+	  };
+	  $.extend(can, $, {
+	    trigger: function(obj, event, args, bubbles) {
+	      if (isBindableElement(obj)) {
+	        $.event.trigger(event, args, obj, !bubbles);
+	      } else if (obj.trigger) {
+	        obj.trigger(event, args);
+	      } else {
+	        if (typeof event === 'string') {
+	          event = {type: event};
+	        }
+	        event.target = event.target || obj;
+	        can.dispatch.call(obj, event, args);
+	      }
+	    },
+	    event: can.event,
+	    addEvent: can.addEvent,
+	    removeEvent: can.removeEvent,
+	    buildFragment: function(elems, context) {
+	      var ret;
+	      elems = [elems];
+	      context = context || document;
+	      context = !context.nodeType && context[0] || context;
+	      context = context.ownerDocument || context;
+	      ret = $.buildFragment(elems, context);
+	      return ret.cacheable ? $.clone(ret.fragment) : ret.fragment || ret;
+	    },
+	    $: $,
+	    each: can.each,
+	    bind: function(ev, cb) {
+	      if (this.bind && this.bind !== can.bind) {
+	        this.bind(ev, cb);
+	      } else if (isBindableElement(this)) {
+	        $.event.add(this, ev, cb);
+	      } else {
+	        can.addEvent.call(this, ev, cb);
+	      }
+	      return this;
+	    },
+	    unbind: function(ev, cb) {
+	      if (this.unbind && this.unbind !== can.unbind) {
+	        this.unbind(ev, cb);
+	      } else if (isBindableElement(this)) {
+	        $.event.remove(this, ev, cb);
+	      } else {
+	        can.removeEvent.call(this, ev, cb);
+	      }
+	      return this;
+	    },
+	    delegate: function(selector, ev, cb) {
+	      if (this.delegate) {
+	        this.delegate(selector, ev, cb);
+	      } else if (isBindableElement(this)) {
+	        $(this).delegate(selector, ev, cb);
+	      } else {
+	        can.bind.call(this, ev, cb);
+	      }
+	      return this;
+	    },
+	    undelegate: function(selector, ev, cb) {
+	      if (this.undelegate) {
+	        this.undelegate(selector, ev, cb);
+	      } else if (isBindableElement(this)) {
+	        $(this).undelegate(selector, ev, cb);
+	      } else {
+	        can.unbind.call(this, ev, cb);
+	      }
+	      return this;
+	    },
+	    proxy: function(fn, context) {
+	      return function() {
+	        return fn.apply(context, arguments);
+	      };
+	    },
+	    attr: attr
+	  });
+	  can.on = can.bind;
+	  can.off = can.unbind;
+	  $.each(['append', 'filter', 'addClass', 'remove', 'data', 'get', 'has'], function(i, name) {
+	    can[name] = function(wrapped) {
+	      return wrapped[name].apply(wrapped, can.makeArray(arguments).slice(1));
+	    };
+	  });
+	  var oldClean = $.cleanData;
+	  $.cleanData = function(elems) {
+	    $.each(elems, function(i, elem) {
+	      if (elem) {
+	        can.trigger(elem, 'removed', [], false);
+	      }
+	    });
+	    oldClean(elems);
+	  };
+	  var oldDomManip = $.fn.domManip,
+	      cbIndex;
+	  $.fn.domManip = function(args, cb1, cb2) {
+	    for (var i = 1; i < arguments.length; i++) {
+	      if (typeof arguments[i] === 'function') {
+	        cbIndex = i;
+	        break;
+	      }
+	    }
+	    return oldDomManip.apply(this, arguments);
+	  };
+	  $(document.createElement("div")).append(document.createElement("div"));
+	  $.fn.domManip = (cbIndex === 2 ? function(args, table, callback) {
+	    return oldDomManip.call(this, args, table, function(elem) {
+	      var elems;
+	      if (elem.nodeType === 11) {
+	        elems = can.makeArray(elem.childNodes);
+	      }
+	      var ret = callback.apply(this, arguments);
+	      can.inserted(elems ? elems : [elem]);
+	      return ret;
+	    });
+	  } : function(args, callback) {
+	    return oldDomManip.call(this, args, function(elem) {
+	      var elems;
+	      if (elem.nodeType === 11) {
+	        elems = can.makeArray(elem.childNodes);
+	      }
+	      var ret = callback.apply(this, arguments);
+	      can.inserted(elems ? elems : [elem]);
+	      return ret;
+	    });
+	  });
+	  if (!can.attr.MutationObserver) {
+	    var oldAttr = $.attr;
+	    $.attr = function(el, attrName) {
+	      var oldValue,
+	          newValue;
+	      if (arguments.length >= 3) {
+	        oldValue = oldAttr.call(this, el, attrName);
+	      }
+	      var res = oldAttr.apply(this, arguments);
+	      if (arguments.length >= 3) {
+	        newValue = oldAttr.call(this, el, attrName);
+	      }
+	      if (newValue !== oldValue) {
+	        can.attr.trigger(el, attrName, oldValue);
+	      }
+	      return res;
+	    };
+	    var oldRemove = $.removeAttr;
+	    $.removeAttr = function(el, attrName) {
+	      var oldValue = oldAttr.call(this, el, attrName),
+	          res = oldRemove.apply(this, arguments);
+	      if (oldValue != null) {
+	        can.attr.trigger(el, attrName, oldValue);
+	      }
+	      return res;
+	    };
+	    $.event.special.attributes = {
+	      setup: function() {
+	        can.data(can.$(this), "canHasAttributesBindings", true);
+	      },
+	      teardown: function() {
+	        $.removeData(this, "canHasAttributesBindings");
+	      }
+	    };
+	  } else {
+	    $.event.special.attributes = {
+	      setup: function() {
+	        var self = this;
+	        var observer = new can.attr.MutationObserver(function(mutations) {
+	          mutations.forEach(function(mutation) {
+	            var copy = can.simpleExtend({}, mutation);
+	            can.trigger(self, copy, []);
+	          });
+	        });
+	        observer.observe(this, {
+	          attributes: true,
+	          attributeOldValue: true
+	        });
+	        can.data(can.$(this), "canAttributesObserver", observer);
+	      },
+	      teardown: function() {
+	        can.data(can.$(this), "canAttributesObserver").disconnect();
+	        $.removeData(this, "canAttributesObserver");
+	      }
+	    };
+	  }
+	  (function() {
+	    var text = "<-\n>",
+	        frag = can.buildFragment(text, document);
+	    if (text !== frag.childNodes[0].nodeValue) {
+	      var oldBuildFragment = can.buildFragment;
+	      can.buildFragment = function(content, context) {
+	        var res = oldBuildFragment(content, context);
+	        if (res.childNodes.length === 1 && res.childNodes[0].nodeType === 3) {
+	          res.childNodes[0].nodeValue = content;
+	        }
+	        return res;
+	      };
+	    }
+	  })();
+	  $.event.special.inserted = {};
+	  $.event.special.removed = {};
+	  return can;
+	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	
+
+
+/***/ },
+/* 21 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/scope";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(27), __webpack_require__(17), __webpack_require__(18), __webpack_require__(21), __webpack_require__(23)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(26), __webpack_require__(17), __webpack_require__(18), __webpack_require__(22), __webpack_require__(24)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var escapeReg = /(\\)?\./g,
 	      escapeDotReg = /\\\./g,
 	      getNames = function(attr) {
@@ -5954,7 +6216,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 21 */
+/* 22 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
@@ -6001,8 +6263,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	      url = !window.steal ? url : steal.config().root.mapJoin("" + steal.id(url));
 	    }
 	    if (window.require) {
-	      if (__webpack_require__(26).toUrl) {
-	        url = __webpack_require__(26).toUrl(url);
+	      if (__webpack_require__(30).toUrl) {
+	        url = __webpack_require__(30).toUrl(url);
 	      }
 	    }
 	    type = $view.types[suffix];
@@ -6232,12 +6494,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 22 */
+/* 23 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/scanner";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(21), __webpack_require__(32), __webpack_require__(13)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, elements, viewCallbacks) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(22), __webpack_require__(36), __webpack_require__(13)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, elements, viewCallbacks) {
 	  var newLine = /(\r|\n)+/g,
 	      notEndTag = /\//,
 	      clean = function(content) {
@@ -6651,12 +6913,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 23 */
+/* 24 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/compute";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(28), __webpack_require__(30)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, bind) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(27), __webpack_require__(29)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, bind) {
 	  var stack = [];
 	  can.__read = function(func, self) {
 	    stack.push({});
@@ -7032,12 +7294,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 24 */
+/* 25 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/render";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(21), __webpack_require__(32), __webpack_require__(37), __webpack_require__(38)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, elements, live) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(22), __webpack_require__(36), __webpack_require__(37), __webpack_require__(38)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, elements, live) {
 	  var pendingHookups = [],
 	      tagChildren = function(tagName) {
 	        var newTag = elements.tagMap[tagName] || "span";
@@ -7171,236 +7433,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 25 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
-	var __moduleName = "bower_components/canjs/amd/can/util/jquery";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(40), __webpack_require__(33), __webpack_require__(34), __webpack_require__(35), __webpack_require__(39), __webpack_require__(36)], __WEBPACK_AMD_DEFINE_RESULT__ = (function($, can, attr, event) {
-	  var isBindableElement = function(node) {
-	    return (node.nodeName && (node.nodeType === 1 || node.nodeType === 9)) || node == window;
-	  };
-	  $.extend(can, $, {
-	    trigger: function(obj, event, args, bubbles) {
-	      if (isBindableElement(obj)) {
-	        $.event.trigger(event, args, obj, !bubbles);
-	      } else if (obj.trigger) {
-	        obj.trigger(event, args);
-	      } else {
-	        if (typeof event === 'string') {
-	          event = {type: event};
-	        }
-	        event.target = event.target || obj;
-	        can.dispatch.call(obj, event, args);
-	      }
-	    },
-	    event: can.event,
-	    addEvent: can.addEvent,
-	    removeEvent: can.removeEvent,
-	    buildFragment: function(elems, context) {
-	      var ret;
-	      elems = [elems];
-	      context = context || document;
-	      context = !context.nodeType && context[0] || context;
-	      context = context.ownerDocument || context;
-	      ret = $.buildFragment(elems, context);
-	      return ret.cacheable ? $.clone(ret.fragment) : ret.fragment || ret;
-	    },
-	    $: $,
-	    each: can.each,
-	    bind: function(ev, cb) {
-	      if (this.bind && this.bind !== can.bind) {
-	        this.bind(ev, cb);
-	      } else if (isBindableElement(this)) {
-	        $.event.add(this, ev, cb);
-	      } else {
-	        can.addEvent.call(this, ev, cb);
-	      }
-	      return this;
-	    },
-	    unbind: function(ev, cb) {
-	      if (this.unbind && this.unbind !== can.unbind) {
-	        this.unbind(ev, cb);
-	      } else if (isBindableElement(this)) {
-	        $.event.remove(this, ev, cb);
-	      } else {
-	        can.removeEvent.call(this, ev, cb);
-	      }
-	      return this;
-	    },
-	    delegate: function(selector, ev, cb) {
-	      if (this.delegate) {
-	        this.delegate(selector, ev, cb);
-	      } else if (isBindableElement(this)) {
-	        $(this).delegate(selector, ev, cb);
-	      } else {
-	        can.bind.call(this, ev, cb);
-	      }
-	      return this;
-	    },
-	    undelegate: function(selector, ev, cb) {
-	      if (this.undelegate) {
-	        this.undelegate(selector, ev, cb);
-	      } else if (isBindableElement(this)) {
-	        $(this).undelegate(selector, ev, cb);
-	      } else {
-	        can.unbind.call(this, ev, cb);
-	      }
-	      return this;
-	    },
-	    proxy: function(fn, context) {
-	      return function() {
-	        return fn.apply(context, arguments);
-	      };
-	    },
-	    attr: attr
-	  });
-	  can.on = can.bind;
-	  can.off = can.unbind;
-	  $.each(['append', 'filter', 'addClass', 'remove', 'data', 'get', 'has'], function(i, name) {
-	    can[name] = function(wrapped) {
-	      return wrapped[name].apply(wrapped, can.makeArray(arguments).slice(1));
-	    };
-	  });
-	  var oldClean = $.cleanData;
-	  $.cleanData = function(elems) {
-	    $.each(elems, function(i, elem) {
-	      if (elem) {
-	        can.trigger(elem, 'removed', [], false);
-	      }
-	    });
-	    oldClean(elems);
-	  };
-	  var oldDomManip = $.fn.domManip,
-	      cbIndex;
-	  $.fn.domManip = function(args, cb1, cb2) {
-	    for (var i = 1; i < arguments.length; i++) {
-	      if (typeof arguments[i] === 'function') {
-	        cbIndex = i;
-	        break;
-	      }
-	    }
-	    return oldDomManip.apply(this, arguments);
-	  };
-	  $(document.createElement("div")).append(document.createElement("div"));
-	  $.fn.domManip = (cbIndex === 2 ? function(args, table, callback) {
-	    return oldDomManip.call(this, args, table, function(elem) {
-	      var elems;
-	      if (elem.nodeType === 11) {
-	        elems = can.makeArray(elem.childNodes);
-	      }
-	      var ret = callback.apply(this, arguments);
-	      can.inserted(elems ? elems : [elem]);
-	      return ret;
-	    });
-	  } : function(args, callback) {
-	    return oldDomManip.call(this, args, function(elem) {
-	      var elems;
-	      if (elem.nodeType === 11) {
-	        elems = can.makeArray(elem.childNodes);
-	      }
-	      var ret = callback.apply(this, arguments);
-	      can.inserted(elems ? elems : [elem]);
-	      return ret;
-	    });
-	  });
-	  if (!can.attr.MutationObserver) {
-	    var oldAttr = $.attr;
-	    $.attr = function(el, attrName) {
-	      var oldValue,
-	          newValue;
-	      if (arguments.length >= 3) {
-	        oldValue = oldAttr.call(this, el, attrName);
-	      }
-	      var res = oldAttr.apply(this, arguments);
-	      if (arguments.length >= 3) {
-	        newValue = oldAttr.call(this, el, attrName);
-	      }
-	      if (newValue !== oldValue) {
-	        can.attr.trigger(el, attrName, oldValue);
-	      }
-	      return res;
-	    };
-	    var oldRemove = $.removeAttr;
-	    $.removeAttr = function(el, attrName) {
-	      var oldValue = oldAttr.call(this, el, attrName),
-	          res = oldRemove.apply(this, arguments);
-	      if (oldValue != null) {
-	        can.attr.trigger(el, attrName, oldValue);
-	      }
-	      return res;
-	    };
-	    $.event.special.attributes = {
-	      setup: function() {
-	        can.data(can.$(this), "canHasAttributesBindings", true);
-	      },
-	      teardown: function() {
-	        $.removeData(this, "canHasAttributesBindings");
-	      }
-	    };
-	  } else {
-	    $.event.special.attributes = {
-	      setup: function() {
-	        var self = this;
-	        var observer = new can.attr.MutationObserver(function(mutations) {
-	          mutations.forEach(function(mutation) {
-	            var copy = can.simpleExtend({}, mutation);
-	            can.trigger(self, copy, []);
-	          });
-	        });
-	        observer.observe(this, {
-	          attributes: true,
-	          attributeOldValue: true
-	        });
-	        can.data(can.$(this), "canAttributesObserver", observer);
-	      },
-	      teardown: function() {
-	        can.data(can.$(this), "canAttributesObserver").disconnect();
-	        $.removeData(this, "canAttributesObserver");
-	      }
-	    };
-	  }
-	  (function() {
-	    var text = "<-\n>",
-	        frag = can.buildFragment(text, document);
-	    if (text !== frag.childNodes[0].nodeValue) {
-	      var oldBuildFragment = can.buildFragment;
-	      can.buildFragment = function(content, context) {
-	        var res = oldBuildFragment(content, context);
-	        if (res.childNodes.length === 1 && res.childNodes[0].nodeType === 3) {
-	          res.childNodes[0].nodeValue = content;
-	        }
-	        return res;
-	      };
-	    }
-	  })();
-	  $.event.special.inserted = {};
-	  $.event.special.removed = {};
-	  return can;
-	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	
-
-
-/***/ },
 /* 26 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var map = {};
-	function webpackContext(req) {
-		return __webpack_require__(webpackContextResolve(req));
-	};
-	function webpackContextResolve(req) {
-		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
-	};
-	webpackContext.keys = function webpackContextKeys() {
-		return Object.keys(map);
-	};
-	webpackContext.resolve = webpackContextResolve;
-	module.exports = webpackContext;
-
-
-/***/ },
-/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
@@ -7511,7 +7544,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 28 */
+/* 27 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
@@ -7549,7 +7582,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 29 */
+/* 28 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
@@ -7661,12 +7694,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 30 */
+/* 29 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/util/batch";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(33)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(31)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var batchNum = 1,
 	      transactions = 0,
 	      batchEvents = [],
@@ -7720,133 +7753,25 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
+/* 30 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var map = {};
+	function webpackContext(req) {
+		return __webpack_require__(webpackContextResolve(req));
+	};
+	function webpackContextResolve(req) {
+		return map[req] || (function() { throw new Error("Cannot find module '" + req + "'.") }());
+	};
+	webpackContext.keys = function webpackContextKeys() {
+		return Object.keys(map);
+	};
+	webpackContext.resolve = webpackContextResolve;
+	module.exports = webpackContext;
+
+
+/***/ },
 /* 31 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
-	var __moduleName = "bower_components/canjs/amd/can/util/string/deparam";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(38)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
-	  var digitTest = /^\d+$/,
-	      keyBreaker = /([^\[\]]+)|(\[\])/g,
-	      paramTest = /([^?#]*)(#.*)?$/,
-	      prep = function(str) {
-	        return decodeURIComponent(str.replace(/\+/g, ' '));
-	      };
-	  can.extend(can, {deparam: function(params) {
-	      var data = {},
-	          pairs,
-	          lastPart;
-	      if (params && paramTest.test(params)) {
-	        pairs = params.split('&');
-	        can.each(pairs, function(pair) {
-	          var parts = pair.split('='),
-	              key = prep(parts.shift()),
-	              value = prep(parts.join('=')),
-	              current = data;
-	          if (key) {
-	            parts = key.match(keyBreaker);
-	            for (var j = 0,
-	                l = parts.length - 1; j < l; j++) {
-	              if (!current[parts[j]]) {
-	                current[parts[j]] = digitTest.test(parts[j + 1]) || parts[j + 1] === '[]' ? [] : {};
-	              }
-	              current = current[parts[j]];
-	            }
-	            lastPart = parts.pop();
-	            if (lastPart === '[]') {
-	              current.push(value);
-	            } else {
-	              current[lastPart] = value;
-	            }
-	          }
-	        });
-	      }
-	      return data;
-	    }});
-	  return can;
-	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	
-
-
-/***/ },
-/* 32 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
-	var __moduleName = "bower_components/canjs/amd/can/view/elements";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(21)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
-	  var selectsCommentNodes = (function() {
-	    return can.$(document.createComment('~')).length === 1;
-	  })();
-	  var elements = {
-	    tagToContentPropMap: {
-	      option: 'textContent' in document.createElement('option') ? 'textContent' : 'innerText',
-	      textarea: 'value'
-	    },
-	    attrMap: can.attr.map,
-	    attrReg: /([^\s=]+)[\s]*=[\s]*/,
-	    defaultValue: can.attr.defaultValue,
-	    tagMap: {
-	      '': 'span',
-	      table: 'tbody',
-	      tr: 'td',
-	      ol: 'li',
-	      ul: 'li',
-	      tbody: 'tr',
-	      thead: 'tr',
-	      tfoot: 'tr',
-	      select: 'option',
-	      optgroup: 'option'
-	    },
-	    reverseTagMap: {
-	      tr: 'tbody',
-	      option: 'select',
-	      td: 'tr',
-	      th: 'tr',
-	      li: 'ul'
-	    },
-	    getParentNode: function(el, defaultParentNode) {
-	      return defaultParentNode && el.parentNode.nodeType === 11 ? defaultParentNode : el.parentNode;
-	    },
-	    setAttr: can.attr.set,
-	    getAttr: can.attr.get,
-	    removeAttr: can.attr.remove,
-	    contentText: function(text) {
-	      if (typeof text === 'string') {
-	        return text;
-	      }
-	      if (!text && text !== 0) {
-	        return '';
-	      }
-	      return '' + text;
-	    },
-	    after: function(oldElements, newFrag) {
-	      var last = oldElements[oldElements.length - 1];
-	      if (last.nextSibling) {
-	        can.insertBefore(last.parentNode, newFrag, last.nextSibling);
-	      } else {
-	        can.appendChild(last.parentNode, newFrag);
-	      }
-	    },
-	    replace: function(oldElements, newFrag) {
-	      elements.after(oldElements, newFrag);
-	      if (can.remove(can.$(oldElements)).length < oldElements.length && !selectsCommentNodes) {
-	        can.each(oldElements, function(el) {
-	          if (el.nodeType === 8) {
-	            el.parentNode.removeChild(el);
-	          }
-	        });
-	      }
-	    }
-	  };
-	  can.view.elements = elements;
-	  return elements;
-	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-	
-
-
-/***/ },
-/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
@@ -7911,12 +7836,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 34 */
+/* 32 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/util/attr";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(33)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(31)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var setImmediate = window.setImmediate || function(cb) {
 	    return setTimeout(cb, 0);
 	  },
@@ -8034,12 +7959,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 35 */
+/* 33 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/event";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(33)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(31)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  can.addEvent = function(event, handler) {
 	    var allEvents = this.__bindEvents || (this.__bindEvents = {}),
 	        eventList = allEvents[event] || (allEvents[event] = []);
@@ -8181,12 +8106,12 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
-/* 36 */
+/* 34 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/util/inserted";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(33)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(31)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  can.inserted = function(elems) {
 	    elems = can.makeArray(elems);
 	    var inDocument = false,
@@ -8240,12 +8165,138 @@ return /******/ (function(modules) { // webpackBootstrap
 
 
 /***/ },
+/* 35 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
+	var __moduleName = "bower_components/canjs/amd/can/util/string/deparam";
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(38)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	  var digitTest = /^\d+$/,
+	      keyBreaker = /([^\[\]]+)|(\[\])/g,
+	      paramTest = /([^?#]*)(#.*)?$/,
+	      prep = function(str) {
+	        return decodeURIComponent(str.replace(/\+/g, ' '));
+	      };
+	  can.extend(can, {deparam: function(params) {
+	      var data = {},
+	          pairs,
+	          lastPart;
+	      if (params && paramTest.test(params)) {
+	        pairs = params.split('&');
+	        can.each(pairs, function(pair) {
+	          var parts = pair.split('='),
+	              key = prep(parts.shift()),
+	              value = prep(parts.join('=')),
+	              current = data;
+	          if (key) {
+	            parts = key.match(keyBreaker);
+	            for (var j = 0,
+	                l = parts.length - 1; j < l; j++) {
+	              if (!current[parts[j]]) {
+	                current[parts[j]] = digitTest.test(parts[j + 1]) || parts[j + 1] === '[]' ? [] : {};
+	              }
+	              current = current[parts[j]];
+	            }
+	            lastPart = parts.pop();
+	            if (lastPart === '[]') {
+	              current.push(value);
+	            } else {
+	              current[lastPart] = value;
+	            }
+	          }
+	        });
+	      }
+	      return data;
+	    }});
+	  return can;
+	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	
+
+
+/***/ },
+/* 36 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
+	var __moduleName = "bower_components/canjs/amd/can/view/elements";
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(22)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	  var selectsCommentNodes = (function() {
+	    return can.$(document.createComment('~')).length === 1;
+	  })();
+	  var elements = {
+	    tagToContentPropMap: {
+	      option: 'textContent' in document.createElement('option') ? 'textContent' : 'innerText',
+	      textarea: 'value'
+	    },
+	    attrMap: can.attr.map,
+	    attrReg: /([^\s=]+)[\s]*=[\s]*/,
+	    defaultValue: can.attr.defaultValue,
+	    tagMap: {
+	      '': 'span',
+	      table: 'tbody',
+	      tr: 'td',
+	      ol: 'li',
+	      ul: 'li',
+	      tbody: 'tr',
+	      thead: 'tr',
+	      tfoot: 'tr',
+	      select: 'option',
+	      optgroup: 'option'
+	    },
+	    reverseTagMap: {
+	      tr: 'tbody',
+	      option: 'select',
+	      td: 'tr',
+	      th: 'tr',
+	      li: 'ul'
+	    },
+	    getParentNode: function(el, defaultParentNode) {
+	      return defaultParentNode && el.parentNode.nodeType === 11 ? defaultParentNode : el.parentNode;
+	    },
+	    setAttr: can.attr.set,
+	    getAttr: can.attr.get,
+	    removeAttr: can.attr.remove,
+	    contentText: function(text) {
+	      if (typeof text === 'string') {
+	        return text;
+	      }
+	      if (!text && text !== 0) {
+	        return '';
+	      }
+	      return '' + text;
+	    },
+	    after: function(oldElements, newFrag) {
+	      var last = oldElements[oldElements.length - 1];
+	      if (last.nextSibling) {
+	        can.insertBefore(last.parentNode, newFrag, last.nextSibling);
+	      } else {
+	        can.appendChild(last.parentNode, newFrag);
+	      }
+	    },
+	    replace: function(oldElements, newFrag) {
+	      elements.after(oldElements, newFrag);
+	      if (can.remove(can.$(oldElements)).length < oldElements.length && !selectsCommentNodes) {
+	        can.each(oldElements, function(el) {
+	          if (el.nodeType === 8) {
+	            el.parentNode.removeChild(el);
+	          }
+	        });
+	      }
+	    }
+	  };
+	  can.view.elements = elements;
+	  return elements;
+	}.apply(null, __WEBPACK_AMD_DEFINE_ARRAY__)), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	
+
+
+/***/ },
 /* 37 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/live";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(32), __webpack_require__(21), __webpack_require__(41), __webpack_require__(42)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, elements, view, nodeLists, parser) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(36), __webpack_require__(22), __webpack_require__(41), __webpack_require__(42)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can, elements, view, nodeLists, parser) {
 	  elements = elements || can.view.elements;
 	  nodeLists = nodeLists || can.view.NodeLists;
 	  parser = parser || can.view.parser;
@@ -8643,7 +8694,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/util/array/each";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(33)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(31)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var isArrayLike = function(obj) {
 	    var length = obj.length;
 	    return typeof arr !== "function" && (length === 0 || typeof length === "number" && length > 0 && (length - 1) in obj);
@@ -14631,7 +14682,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/node_lists";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(32)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(7), __webpack_require__(36)], __WEBPACK_AMD_DEFINE_RESULT__ = (function(can) {
 	  var canExpando = true;
 	  try {
 	    document.createTextNode('')._ = 0;
@@ -14757,7 +14808,7 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;"use strict";
 	var __moduleName = "bower_components/canjs/amd/can/view/parser";
-	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(21)], __WEBPACK_AMD_DEFINE_RESULT__ = (function() {
+	!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(22)], __WEBPACK_AMD_DEFINE_RESULT__ = (function() {
 	  function makeMap(str) {
 	    var obj = {},
 	        items = str.split(",");
