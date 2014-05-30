@@ -166,7 +166,7 @@ can.Component.extend({
           el = this.element,
           control = this,
           box = el.children(".draggable-box"),
-          // this.on() makes listening to observables memory-safe. 
+          // this.on() makes listening to observables memory-safe.
           boxHeld = this.on(Mouse.isDown(box)).log("box being held");
       boxHeld.assign(can.$("body"), "toggleClass", "drag-drop-demo-dragging");
       boxHeld.changes().filter(function(x){return x;}).onValue(function() {
@@ -177,8 +177,11 @@ can.Component.extend({
       });
       // this.on() can also be used normally but without a callback, in which
       // case it returns an EventStream
+      this.on(window, "click").log("click happened");
       this.on(scope, "boxPosition").map(".attr").log("boxPosition changed");
-    }
+    },
+    // Still have access to templated stuff, but why bother? :)
+    ".draggable-box click": function() { console.log("box clicked"); }
   }
 });
 
