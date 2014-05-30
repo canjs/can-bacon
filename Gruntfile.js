@@ -66,7 +66,7 @@ module.exports = function(grunt) {
   grunt.registerTask("dev", ["webpack:lib:keepalive"]);
   grunt.registerTask("update-build", "Commits the built version", function() {
     exec([
-      "git add ./build",
+      "git add ./dist",
       "git commit --allow-empty -m 'Updating build files'"
     ]);
   });
