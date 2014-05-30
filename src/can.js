@@ -3,6 +3,8 @@ module can from "can";
 
 var oldBind = can.bind;
 /**
+ * @function can.bind
+ *
  * Extends `can.bind()` such that if it's called with only one argument (the
  * event name), or without any arguments, a `Bacon.EventStream` object is
  * created, instead of binding a callback to the event.
@@ -13,9 +15,13 @@ var oldBind = can.bind;
  * See http://canjs.com/docs/can.bind.html for documentation on the default
  * behavior.
  *
+ * @param {Any} this - The object to bind events on. If this object is a
+ *                     `Bacon.Observable`, `can.bind` is a no-op, returning
+ *                     `this` immediately.
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
- * parameter is provided, an `EventStream` will not be returned.
+ *                                parameter is provided, the method will revert
+ *                                to its default (non-`can.bacon`) behavior.
  *
  * @returns EventStream | Any
  *
@@ -24,16 +30,52 @@ var oldBind = can.bind;
  *
  */
 can.bind = function(ev, cb) {
-  return cb ?
-    oldBind.apply(this, arguments) :
-    toBaconObservable(this, ev);
+  if (this instanceof bacon.Observable) {
+    return this;
+  } else if (cb) {
+    return oldBind.apply(this, arguments);
+  } else {
+    return toBaconObservable(this, ev);
+  }
 };
 
 var oldDelegate = can.delegate;
+/**
+ * @function can.delegate
+ *
+ * Extends `can.delegate()` such that if it's called with only one or two
+ * arguments (the selector, and the event name), a `Bacon.EventStream` object is
+ * created, instead of binding a callback to the event.
+ *
+ * The actual event values sent into the `EventStream` will vary depending on
+ * the observed value.
+ *
+ * See http://canjs.com/docs/can.delegate.html for documentation on the default
+ * behavior.
+ *
+ * @param {Any} this - The object to bind events on. If this object is a
+ *                     `Bacon.Observable`, `can.bind` is a no-op, returning
+ *                     `this` immediately.
+ * @param {Any} selector - The selector to delegate to.
+ * @param {String} [event="change"] - Name of event to hook up to.
+ * @param {Function} [callback] - Callback to invoke when event fires. If this
+ *                                parameter is provided, the method will revert
+ *                                to its default (non-`can.bacon`) behavior.
+ *
+ * @returns EventStream | Any
+ *
+ * @example
+ * can.delegate.call(window, "a", "click").doAction(".preventDefault").log();
+ *
+ */
 can.delegate = function(selector, ev, cb) {
-  return cb ?
-    oldDelegate.apply(this, arguments) :
-    toBaconObservable(this, ev, selector);
+  if (this instanceof bacon.Observable) {
+    return this;
+  } else if (cb) {
+    return oldBind.apply(this, arguments);
+  } else {
+    return toBaconObservable(this, ev, selector);
+  }
 };
 
 /**
@@ -47,7 +89,8 @@ can.delegate = function(selector, ev, cb) {
  *
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
- * parameter is provided, an `EventStream` will not be returned.
+ *                                parameter is provided, the method will revert
+ *                                to its default (non-`can.bacon`) behavior.
  *
  * @returns EventStream | Computed
  *
@@ -68,7 +111,77 @@ can.bindAndSetup = function(ev, cb) {
     toBaconObservable(this, ev);
 };
 
+var oldControlOn = can.Control.prototype.on;
 /**
+ * @function can.Control#on
+ *
+ * Enhances `can.Control#on` (and by extension, `can.Component#events#on`) so it
+ * can be used to listen to event streams in a memory-safe way, according to the
+ * control/component's lifecycle. Also allows returning event streams from
+ * regular event bindings.
+ *
+ * See http://canjs.com/docs/can.Control.prototype.on.html
+ *
+ *
+ * @param {Any} [context=this.element] - The object to listen for events on. If
+ *                                       this object is a `Bacon.Observable`,
+ *                                       this method will immediately return a
+ *                                       stream that ends automatically if the
+ *                                       `this` (the Control or Component) is
+ *                                       destroyed.
+ * @param {String} [selector] - If provided, the selector to delegate to.
+ * @param {String} [event="change"] - The name of the event to listen to.
+ * @param {Function} [callback] - Callback to invoke when event fires. If this
+ *                                parameter is provided, the method will revert
+ *                                to its default (non-`can.bacon`) behavior.
+ *
+ * @returns EventStream | Observable | Number
+ *
+ * @example
+ * ...
+ * events: {
+ *   inserted: function() {
+ *     this.on(GlobalStreams.specialEvent).log("special event:");
+ *   }
+ * }
+ * ...
+ * $("mycomponent").remove() // logs 'special event: \<end\>'
+ * GlobalStreams.specialEvent.push("whatever"); // Nothing happens
+ *
+ * // The following are also equivalent:
+ * this.on(scope, "change").log("Scope changed")
+ * this.on(scope).log("Scope changed")
+ *
+ */
+can.Control.prototype.on = function(ctx, selector, eventName, func) {
+  if (!ctx) {
+    return oldControlOn.apply(this, arguments);
+  }
+  if (ctx instanceof bacon.Observable) {
+    return ctx.takeUntil(can.bind.call(this, "destroyed"));
+  }
+  if (typeof ctx === "string") {
+    func = eventName;
+    eventName = selector;
+    selector = ctx;
+    ctx = this.element;
+  }
+  if (func == null) {
+    func = eventName;
+    eventName = selector;
+    selector = null;
+  }
+  if (func == null) {
+    return toBaconObservable(ctx, eventName, selector)
+      .takeUntil(can.bind.call(this, "destroyed"));
+  } else {
+    return oldControlOn.apply(this, arguments);
+  }
+};
+
+/**
+ * @function can.Map#bind
+ *
  * Replaces the default CanJS behavior of the `can.Map#bind()` method with one
  * that returns an `EventStream` of event objects or values if the `callback`
  * argument is not provided.
@@ -98,7 +211,8 @@ can.bindAndSetup = function(ev, cb) {
  *
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
- * parameter is provided, an `EventStream` will not be returned.
+ *                                parameter is provided, the method will revert
+ *                                to its default (non-`can.bacon`) behavior.
  *
  * @returns EventStream | `this`
  *
@@ -206,7 +320,8 @@ function MapChangeEvent(args) {
  *
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
- * parameter is provided, an `EventStream` will not be returned.
+ *                                parameter is provided, the method will revert
+ *                                to its default (non-`can.bacon`) behavior.
  *
  * @returns EventStream | `this`
  *

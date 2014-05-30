@@ -154,7 +154,7 @@ can.Component.extend({
     },
     boxPosition: function(box) {
       var startPos = box.position();
-      return Mouse.deltas()
+      return this.on(Mouse.deltas())
         .scan({x: startPos.left, y: startPos.top}, function(a, b) {
           return {x: a.x + b.x, y: a.y + b.y};
         }).map(this.scope.attr("clamp") ?
@@ -166,13 +166,18 @@ can.Component.extend({
           el = this.element,
           control = this,
           box = el.children(".draggable-box"),
-          boxHeld = Mouse.isDown(box);
+          // this.on() makes listening to observables memory-safe. 
+          boxHeld = this.on(Mouse.isDown(box)).log("box being held");
       boxHeld.assign(can.$("body"), "toggleClass", "drag-drop-demo-dragging");
       boxHeld.changes().filter(function(x){return x;}).onValue(function() {
         control.boxPosition(box)
           .takeWhile(boxHeld)
+          .log("box being dragged")
           .assign(scope, "attr", "boxPosition");
       });
+      // this.on() can also be used normally but without a callback, in which
+      // case it returns an EventStream
+      this.on(scope, "boxPosition").map(".attr").log("boxPosition changed");
     }
   }
 });
