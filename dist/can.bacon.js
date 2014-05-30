@@ -72,11 +72,52 @@ return /******/ (function(modules) { // webpackBootstrap
 	var can = __webpack_require__(4);
 	var oldBind = can.bind;
 	can.bind = function(ev, cb) {
-	  return cb ? oldBind.apply(this, arguments) : toBaconObservable(this, ev);
+	  if (this instanceof bacon.Observable) {
+	    return this;
+	  } else if (cb) {
+	    return oldBind.apply(this, arguments);
+	  } else {
+	    return toBaconObservable(this, ev);
+	  }
+	};
+	var oldDelegate = can.delegate;
+	can.delegate = function(selector, ev, cb) {
+	  if (this instanceof bacon.Observable) {
+	    return this;
+	  } else if (cb) {
+	    return oldDelegate.apply(this, arguments);
+	  } else {
+	    return toBaconObservable(this, ev, selector);
+	  }
 	};
 	var oldBindAndSetup = can.bindAndSetup;
 	can.bindAndSetup = function(ev, cb) {
 	  return cb ? oldBindAndSetup.apply(this, arguments) : toBaconObservable(this, ev);
+	};
+	var oldControlOn = can.Control.prototype.on;
+	can.Control.prototype.on = function(ctx, selector, eventName, func) {
+	  if (!ctx) {
+	    return oldControlOn.apply(this, arguments);
+	  }
+	  if (ctx instanceof bacon.Observable) {
+	    return ctx.takeUntil(can.bind.call(this, "destroyed"));
+	  }
+	  if (typeof ctx === "string") {
+	    func = eventName;
+	    eventName = selector;
+	    selector = ctx;
+	    ctx = this.element;
+	  }
+	  if (func == null) {
+	    func = eventName;
+	    eventName = selector;
+	    selector = null;
+	  }
+	  if (func == null) {
+	    return toBaconObservable(ctx, eventName, selector).takeUntil(can.bind.call(this, "destroyed"));
+	  } else {
+	    return oldControlOn.apply(this, arguments);
+	  }
 	};
 	can.Map.prototype.bind = can.bindAndSetup;
 	can.Map.prototype.getEventValueForBacon = function(args) {
@@ -139,15 +180,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	      throw new Error("Unexpected can.List event: " + this.event.type);
 	  }
 	}
-	function toBaconObservable(ctx, ev) {
+	function toBaconObservable(ctx, ev, selector) {
 	  ev = ev == null ? "change" : ev;
 	  var stream = bacon.fromBinder(function(sink) {
 	    function cb() {
 	      sink(new bacon.Next(chooseEventData(ctx, arguments)));
 	    }
-	    ctx.bind(ev, cb);
+	    selector ? can.delegate.call(ctx, selector, ev, cb) : can.bind.call(ctx, ev, cb);
 	    return (function() {
-	      return ctx.unbind(ev, cb);
+	      return selector ? can.undelegate.call(ctx, selector, ev, cb) : can.unbind.call(ctx, ev, cb);
 	    });
 	  });
 	  if (ctx.isComputed) {
@@ -163,7 +204,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  } else if (ctx.getEventValueForBacon) {
 	    return ctx.getEventValueForBacon(eventArgs, evName);
 	  } else {
-	    return [].slice.call(eventArgs);
+	    return eventArgs[0];
 	  }
 	}
 	
@@ -177,13 +218,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	var __moduleName = "src/bacon";
 	var bacon = __webpack_require__(3);
 	var can = __webpack_require__(4);
-	bacon.Observable.prototype.toCanCompute = function(compute) {
-	  compute = compute || can.compute();
+	bacon.Observable.prototype.toCanCompute = function() {
+	  var compute = arguments[0] !== (void 0) ? arguments[0] : can.compute();
 	  this.onValue(compute);
 	  return compute;
 	};
-	bacon.Observable.prototype.toCanMap = function(map) {
-	  map = map || new can.Map();
+	bacon.Observable.prototype.toCanMap = function() {
+	  var map = arguments[0] !== (void 0) ? arguments[0] : new can.Map();
 	  this.onValue((function(val) {
 	    return syncAsMap(map, val);
 	  }));
@@ -203,13 +244,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	      break;
 	    case "replace":
 	      map.attr(val.value, val.removeOthers);
+	      break;
+	    case undefined:
+	      console.warn("Missing event type on change event: ", val);
+	      map.attr(val);
+	      break;
 	    default:
 	      console.warn("Unexpected event type: ", val.how);
 	      map.attr(val);
 	  }
 	}
-	bacon.Observable.prototype.toCanList = function(list) {
-	  list = list || new can.List();
+	bacon.Observable.prototype.toCanList = function() {
+	  var list = arguments[0] !== (void 0) ? arguments[0] : new can.List();
 	  this.onValue((function(val) {
 	    return syncAsList(list, val);
 	  }));
@@ -236,6 +282,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	        } else {
 	          list.replace(val.value);
 	        }
+	        break;
+	      case undefined:
+	        console.warn("Missing event type on change event: ", val);
+	        list.replace(val.value);
+	        break;
 	      default:
 	        console.warn("Unexpected event type: ", val.how);
 	        list.replace(val.value);
