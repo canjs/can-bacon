@@ -421,6 +421,6 @@ function chooseEventData(ctx, eventArgs, evName) {
   } else if (ctx.getEventValueForBacon) {
     return ctx.getEventValueForBacon(eventArgs, evName);
   } else {
-    return [].slice.call(eventArgs);
+    return eventArgs[0];
   }
 }
