@@ -1,6 +1,7 @@
 module.exports = function(grunt) {
   var webpack = require("webpack"),
       sh = require("execSync");
+  require("es6ify").traceurOverrides = {blockBinding: true};
   grunt.loadNpmTasks("grunt-webpack");
   grunt.loadNpmTasks("grunt-mocha-test");
   grunt.initConfig({
@@ -15,41 +16,22 @@ module.exports = function(grunt) {
       options: {
         watch: true,
         output: {
-          library: "can.bacon",
           libraryTarget: "umd",
           path: __dirname + "/dist/",
           filename: "[name].js"
         },
         externals: {
-          can: "var can",
-          jquery: "var jQuery",
-          bacon: "var Bacon"
+          can: "umd can",
+          jquery: "umd jQuery",
+          bacon: "umd Bacon"
         },
-        resolve: {
-          alias: {
-            "jquery": "jquery/dist/jquery.js",
-            "can": "canjs/amd/can",
-            "bacon": "bacon/dist/Bacon.js"
-          },
-          modulesDirectories: ["bower_components", "node_modules"]
-        },
-        plugins: [
-          new webpack.ContextReplacementPlugin(/canjs[\/\\]amd/, /^$/)
-        ],
         devtool: "#sourcemap",
         module: {
-          noParse: /bower_components\/jquery/,
           loaders: [{
             test: /\.js$/,
             loader: "transform/cacheable?es6ify"
           }]
         }
-      },
-      full: {entry: {"can.bacon.full": "./src/index.js"}, externals: null},
-      fullMin: {
-        externals: null,
-        entry: {"can.bacon.full.min": "./src/index.js"},
-        plugins: [new webpack.optimize.UglifyJsPlugin({compressor:{warnings:false}})]
       },
       lib: {entry: {"can.bacon": "./src/index.js"}},
       libMin: {
@@ -61,8 +43,7 @@ module.exports = function(grunt) {
 
   grunt.registerTask("default", ["test", "build"]);
   grunt.registerTask("test", ["mochaTest:test"]);
-  grunt.registerTask("build", ["webpack:lib", "webpack:libMin",
-                               "webpack:full", "webpack:fullMin"]);
+  grunt.registerTask("build", ["webpack:lib", "webpack:libMin"]);
   grunt.registerTask("dev", ["webpack:lib:keepalive"]);
   grunt.registerTask("update-build", "Commits the built version", function() {
     exec([
