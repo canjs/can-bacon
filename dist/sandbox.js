@@ -54,87 +54,6 @@ $("#container").html(can.view("#container-template", {
 }));
 
 /**
- * DOM Utility "modules"
- */
-function domStream(name) {
-  return function(target) {
-    return $(target||document).asEventStream(name);
-  };
-}
-var Mouse = {
-  mousemove: domStream("mousemove"),
-  mouseup: domStream("mouseup"),
-  mousedown: domStream("mousedown"),
-  click: domStream("click"),
-  clicks: function(target) {
-    return Mouse.click(target).map(function(ev) {
-      return {
-        x: target ? ev.offsetX : ev.pageX,
-        y: target ? ev.offsetY : ev.pageY
-      };
-    });
-  },
-  deltas: function(target) {
-    return Mouse.position(target).diff(null, function(a, b) {
-      return a ? {x: b.x - a.x, y: b.y - a.y} : {x: 0, y: 0};
-    }).toEventStream();
-  },
-  position: function(target) {
-    return Mouse.mousemove(target)
-      .map(function(ev) {
-        return {
-          x: target ? ev.offsetX : ev.pageX,
-          y: target ? ev.offsetY : ev.pageY
-        };
-      }).toProperty();
-  },
-  isUp: function(upTarget, downTarget) {
-    return Mouse.mouseup(upTarget).map(true)
-      .merge(Mouse.mousedown(downTarget).map(false))
-      .toProperty();
-  },
-  isDown: function(downTarget, upTarget) {
-    return Mouse.isUp(upTarget, downTarget).not();
-  }
-};
-
-var Window = {
-  height: function() {
-    return Window.dimensions().map(".height");
-  },
-  width: function() {
-    return Window.dimensions().map(".width");
-  },
-  dimensions: function() {
-    var win = $(window);
-    return win.asEventStream("resize")
-      .map(function(){
-        return {width: win.outerWidth(), height: win.outerHeight()};
-      })
-      .toProperty({width: win.outerWidth(), height: win.outerHeight()});
-  },
-  animationFrames: function() {
-    return Bacon.fromBinder(function(sink) {
-      var done = false,
-          requestID;
-      function request() {
-        requestID = window.requestAnimationFrame(function(x) {
-          sink(x);
-          if (!done) {request();}
-        });
-      }
-      request();
-      return function stop() {
-        done = true;
-        if (requestID) {
-          window.cancelAnimationFrame(requestID);
-        }
-      };
-    });
-  }
-};
-
-/**
  * Drag and drop component
  */
 can.Component.extend({
@@ -154,7 +73,7 @@ can.Component.extend({
     },
     boxPosition: function(box) {
       var startPos = box.position();
-      return this.on(Mouse.deltas())
+      return this.on(Bacon.Browser.Mouse.deltas())
         .scan({x: startPos.left, y: startPos.top}, function(a, b) {
           return {x: a.x + b.x, y: a.y + b.y};
         }).map(this.scope.attr("clamp") ?
@@ -167,7 +86,7 @@ can.Component.extend({
           control = this,
           box = el.children(".draggable-box"),
           // this.on() makes listening to observables memory-safe.
-          boxHeld = this.on(Mouse.isDown(box)).log("box being held");
+          boxHeld = this.on(Bacon.Browser.Mouse.isDown(box)).log("box being held");
       boxHeld.assign(can.$("body"), "toggleClass", "drag-drop-demo-dragging");
       boxHeld.changes().filter(function(x){return x;}).onValue(function() {
         control.boxPosition(box)
