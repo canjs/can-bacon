@@ -35,6 +35,7 @@
     "grunt-webpack": "^1.0.6",
     "grunt-mocha-test": "^0.10.2",
     "execSync": "^1.0.1-pre",
-    "transform-loader": "^0.2.0"
+    "transform-loader": "^0.2.0",
+    "bacon-browser": "0.0.4"
   }
 }
