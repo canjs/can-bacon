@@ -23,6 +23,11 @@
     "url": "https://github.com/zkat/can.bacon/issues"
   },
   "homepage": "https://github.com/zkat/can.bacon",
+  "dependencies": {
+    "canjs": "~2",
+    "jquery": "^2.1.1",
+    "baconjs": "^0.7.13"
+  },
   "devDependencies": {
     "grunt": "^0.4.5",
     "webpack": "^1.1.11",
