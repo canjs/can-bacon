@@ -3,10 +3,10 @@
 		module.exports = factory(require("Bacon"), require("can"));
 	else if(typeof define === 'function' && define.amd)
 		define(["Bacon", "can"], factory);
-	else if(typeof exports === 'object')
-		exports["can.bacon"] = factory(require("Bacon"), require("can"));
-	else
-		root["can.bacon"] = factory(root["Bacon"], root["can"]);
+	else {
+		var a = typeof exports === 'object' ? factory(require("Bacon"), require("can")) : factory(root["Bacon"], root["can"]);
+		for(var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
+	}
 })(this, function(__WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_4__) {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	
@@ -101,20 +101,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  if (ctx instanceof bacon.Observable) {
 	    return ctx.takeUntil(can.bind.call(this, "destroyed"));
-	  }
-	  if (typeof ctx === "string") {
-	    func = eventName;
-	    eventName = selector;
-	    selector = ctx;
-	    ctx = this.element;
-	  }
-	  if (func == null) {
-	    func = eventName;
-	    eventName = selector;
-	    selector = null;
-	  }
-	  if (func == null) {
-	    return toBaconObservable(ctx, eventName, selector).takeUntil(can.bind.call(this, "destroyed"));
 	  } else {
 	    return oldControlOn.apply(this, arguments);
 	  }
@@ -300,13 +286,13 @@ return /******/ (function(modules) { // webpackBootstrap
 /* 3 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = Bacon;
+	module.exports = __WEBPACK_EXTERNAL_MODULE_3__;
 
 /***/ },
 /* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
-	module.exports = can;
+	module.exports = __WEBPACK_EXTERNAL_MODULE_4__;
 
 /***/ }
 /******/ ])
