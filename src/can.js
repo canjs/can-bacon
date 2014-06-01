@@ -117,8 +117,9 @@ var oldControlOn = can.Control.prototype.on;
  *
  * Enhances `can.Control#on` (and by extension, `can.Component#events#on`) so it
  * can be used to listen to event streams in a memory-safe way, according to the
- * control/component's lifecycle. Also allows returning event streams from
- * regular event bindings.
+ * control/component's lifecycle. The behavior of this method changes *only* if
+ * the first argument is `instanceof Bacon.Observe`, in which case all other
+ * arguments are ignored..
  *
  * See http://canjs.com/docs/can.Control.prototype.on.html
  *
@@ -159,21 +160,6 @@ can.Control.prototype.on = function(ctx, selector, eventName, func) {
   }
   if (ctx instanceof bacon.Observable) {
     return ctx.takeUntil(can.bind.call(this, "destroyed"));
-  }
-  if (typeof ctx === "string") {
-    func = eventName;
-    eventName = selector;
-    selector = ctx;
-    ctx = this.element;
-  }
-  if (func == null) {
-    func = eventName;
-    eventName = selector;
-    selector = null;
-  }
-  if (func == null) {
-    return toBaconObservable(ctx, eventName, selector)
-      .takeUntil(can.bind.call(this, "destroyed"));
   } else {
     return oldControlOn.apply(this, arguments);
   }
