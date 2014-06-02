@@ -86,18 +86,15 @@ can.Component.extend({
           control = this,
           box = el.children(".draggable-box"),
           // this.on() makes listening to observables memory-safe.
-          boxHeld = this.on(Bacon.Browser.Mouse.isDown(box)).log("box being held");
+          boxHeld = this.on(Bacon.Browser.Mouse.isHeld(box)).log("box being held");
       boxHeld.assign(can.$("body"), "toggleClass", "drag-drop-demo-dragging");
-      boxHeld.changes().filter(function(x){return x;}).onValue(function() {
+      boxHeld.onValue(function(isHeld) {
+        if (!isHeld) { return; }
         control.boxPosition(box)
           .takeWhile(boxHeld)
           .log("box being dragged")
           .assign(scope, "attr", "boxPosition");
       });
-      // this.on() can also be used normally but without a callback, in which
-      // case it returns an EventStream
-      this.on(window, "click").log("click happened");
-      this.on(scope, "boxPosition").map(".attr").log("boxPosition changed");
     },
     // Still have access to templated stuff, but why bother? :)
     ".draggable-box click": function() { console.log("box clicked"); }
