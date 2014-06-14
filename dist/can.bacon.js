@@ -1,10 +1,10 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
-		module.exports = factory(require("Bacon"), require("can"));
+		module.exports = factory(require("bacon"), require("can"));
 	else if(typeof define === 'function' && define.amd)
-		define(["Bacon", "can"], factory);
+		define(["bacon", "can"], factory);
 	else {
-		var a = typeof exports === 'object' ? factory(require("Bacon"), require("can")) : factory(root["Bacon"], root["can"]);
+		var a = typeof exports === 'object' ? factory(require("bacon"), require("can")) : factory(root["Bacon"], root["can"]);
 		for(var i in a) (typeof exports === 'object' ? exports : root)[i] = a[i];
 	}
 })(this, function(__WEBPACK_EXTERNAL_MODULE_3__, __WEBPACK_EXTERNAL_MODULE_4__) {
