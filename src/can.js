@@ -81,11 +81,10 @@ can.delegate = function(selector, ev, cb) {
 /**
  * @function can.compute#bind
  *
- * Replaces the default CanJS behavior of the `can.compute#bind()` method with
- * one that returns an `EventStream` of new `can.compute` values, if no
- * `callback` is provided to the `.bind()` call. If the `callback` is present,
- * this method reverts to the standard behavior of binding an event listener
- * directly.
+ * Extends the default CanJS behavior of the `can.compute#bind()` method so that
+ * it returns an `EventStream` of new `can.compute` values, if no `callback` is
+ * provided to the `.bind()` call. If the `callback` is present, this method
+ * reverts to the standard behavior of binding an event listener directly.
  *
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
