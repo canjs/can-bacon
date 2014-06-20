@@ -15,8 +15,8 @@ bacon.Observable.prototype.toCanCompute = function(compute=can.compute()) {
  * Returns a `can.Map` whose value is managed by a stream of incoming map change
  * events.
  *
- * If `map` is provided, it *must* be a `can.Map` instance, which will be used
- * instead of creating a new empty `can.Map`.
+ * If `map` is provided, it *must* be a `can.Map` instance (or an instance of a
+ * subclass), which will be used instead of creating a new empty `can.Map`.
  *
  * Two kinds of event objects are accepted:
  *
