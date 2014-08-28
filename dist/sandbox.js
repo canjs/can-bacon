@@ -72,13 +72,16 @@ can.Component.extend({
       };
     },
     boxPosition: function(box) {
-      var startPos = box.position();
-      return this.on(Bacon.Browser.Mouse.deltas())
+      var startPos = box.position(),
+          that = this;
+      return that.on(Bacon.Browser.Mouse.deltas())
         .scan({x: startPos.left, y: startPos.top}, function(a, b) {
           return {x: a.x + b.x, y: a.y + b.y};
-        }).map(this.scope.attr("clamp") ?
-               this.clampToDemo.bind(this, box) :
-               function(x){return x;});
+        }).map(function(coords) {
+          return that.scope.attr("clamp") ?
+            that.clampToDemo(box, coords) :
+            coords;
+        });
     },
     inserted: function() {
       var scope = this.scope,
@@ -88,8 +91,7 @@ can.Component.extend({
           // this.on() makes listening to observables memory-safe.
           boxHeld = this.on(Bacon.Browser.Mouse.isHeld(box)).log("box being held");
       boxHeld.assign(can.$("body"), "toggleClass", "drag-drop-demo-dragging");
-      boxHeld.onValue(function(isHeld) {
-        if (!isHeld) { return; }
+      boxHeld.filter(boxHeld).onValue(function(isHeld) {
         control.boxPosition(box)
           .takeWhile(boxHeld)
           .log("box being dragged")
