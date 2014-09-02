@@ -1,12 +1,12 @@
 module bacon from "bacon";
 module can from "can";
-import "can/eventstream";
+import "can.eventstream";
 
 /**
  * Wraps `can.bindComputeFromStream`.
  *
  * `stream.toCanCompute(compute)` is the same as
- * `can.bindComputeFromStream(stream, compute);
+ * `can.bindComputeFromStream(stream, compute);`
  */
 bacon.Observable.prototype.toCanCompute = function(compute=can.compute()) {
   return can.bindComputeFromStream(this, compute);
@@ -16,7 +16,7 @@ bacon.Observable.prototype.toCanCompute = function(compute=can.compute()) {
  * Wraps `can.bindMapFromStream`.
  *
  * `stream.toCanMap(compute)` is the same as
- * `can.bindMapFromStream(stream, compute);
+ * `can.bindMapFromStream(stream, compute);`
  */
 bacon.Observable.prototype.toCanMap = function(map=new can.Map()) {
   return can.bindMapFromStream(this, map);
@@ -26,7 +26,7 @@ bacon.Observable.prototype.toCanMap = function(map=new can.Map()) {
  * Wraps `can.bindListFromStream`.
  *
  * `stream.toCanList(compute)` is the same as
- * `can.bindListFromStream(stream, compute);
+ * `can.bindListFromStream(stream, compute);`
  */
 bacon.Observable.prototype.toCanList = function(list=new can.List()) {
   return can.bindListFromStream(this, list);
