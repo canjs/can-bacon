@@ -67,8 +67,8 @@ can.Component.extend({
     clampToDemo: function(box, coordinates) {
       var el = this.element;
       return {
-        x: clamp(coordinates.x, 0, el.width()-box.width()),
-        y: clamp(coordinates.y, 0, el.height()-box.height())
+        x: Math.round(clamp(coordinates.x, 0, el.width()-box.width())),
+        y: Math.round(clamp(coordinates.y, 0, el.height()-box.height()))
       };
     },
     boxPosition: function(box) {

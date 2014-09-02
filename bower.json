@@ -17,6 +17,6 @@
   "dependencies": {
     "bacon": "~0.7.11",
     "canjs": "~2.1.0",
-    "jquery": "~2.1.1"
+    "can.eventstream": "~0.1.0"
   }
 }

@@ -20,25 +20,15 @@ module.exports = function(grunt) {
           path: __dirname + "/dist/",
           filename: "[name].js"
         },
-        resolve: {
-          alias: {
-            "can/eventstream": "./can.js"
-          }
-        },
         externals: {
           can: "umd can",
-          jquery: {
-            "root": "jQuery",
-            "commonjs": "jquery",
-            "commonjs2": "jquery",
-            "amd": "jquery"
-          },
           bacon: {
             "root": "Bacon",
             "commonjs": "bacon",
             "commonjs2": "bacon",
             "amd": "bacon"
-          }
+          },
+          "can.eventstream": "umd can.eventstream"
         },
         devtool: "#sourcemap",
         module: {

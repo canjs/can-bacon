@@ -25,8 +25,8 @@
   "homepage": "https://github.com/zkat/can.bacon",
   "dependencies": {
     "canjs": "~2",
-    "jquery": "^2.1.1",
-    "baconjs": "^0.7.13"
+    "baconjs": "^0.7.13",
+    "can.eventstream": "^0.1.0"
   },
   "devDependencies": {
     "grunt": "^0.4.5",
@@ -36,6 +36,8 @@
     "grunt-mocha-test": "^0.10.2",
     "execSync": "^1.0.1-pre",
     "transform-loader": "^0.2.0",
-    "bacon-browser": "0.0.5"
+    "bacon-browser": "0.0.5",
+    "es6ify": "1.1.0",
+    "jquery": "^2.1.1"
   }
 }
