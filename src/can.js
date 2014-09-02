@@ -1,12 +1,58 @@
-module bacon from "bacon";
 module can from "can";
+
+/**
+ * @function can.isEventStream
+ *
+ * Must be implemented by a can.eventstream plugin.
+ *
+ * Returns a truthy value if `stream` is a compatible event stream.
+ *
+ * @param {EventStream} stream
+ * @returns boolean
+ */
+
+/**
+ * @function can.onEventStreamValue
+ *
+ * Must be implemented by a can.eventstream plugin.
+ *
+ * Binds `callback` such that it will be called on `stream` values. Callback
+ * invocation will follow the stream's semantics.
+ *
+ * @param {EventStream} stream
+ * @param {Function(Any)} callback - Callback that receives a single event value
+ *                                   whenever the stream 'fires'
+ *
+ * @returns Function() - Calling this function may be used to unbind the
+ *                       listener.
+ */
+
+/**
+ * @function can.bindEventStream
+ *
+ * Must be implemented by a can.eventstream plugin.
+ *
+ * Returns an event stream that will listen to events, using the given
+ * parameters, until the `until` stream receives a value.
+ *
+ * @param context - The context to listen to events on. `can.bind` and
+ *                        `can.delegate` may be used.
+ * @param event - Name of event to listen to.
+ * @param selector - Subselector to delegate on, if any.
+ * @param {EventStream} until - `EventStream` that will notify when the current
+ *                              stream should stop firing.
+ */
+
+/**
+ * @function #getEventValueForStream
+ */
 
 var oldBind = can.bind;
 /**
  * @function can.bind
  *
  * Extends `can.bind()` such that if it's called with only one argument (the
- * event name), or without any arguments, a `Bacon.EventStream` object is
+ * event name), or without any arguments, an `EventStream` object is
  * created, instead of binding a callback to the event.
  *
  * The actual event values sent into the `EventStream` will vary depending on
@@ -15,27 +61,26 @@ var oldBind = can.bind;
  * See http://canjs.com/docs/can.bind.html for documentation on the default
  * behavior.
  *
- * @param {Any} this - The object to bind events on. If this object is a
- *                     `Bacon.Observable`, `can.bind` is a no-op, returning
- *                     `this` immediately.
+ * @param {Any} this - The object to bind events on.
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
  *                                parameter is provided, the method will revert
- *                                to its default (non-`can.bacon`) behavior.
+ *                                to its default behavior.
  *
  * @returns EventStream | Any
  *
  * @example
- * can.bind.call(new can.Map(), "change").map(".value").log();
+ * can.bind.call(new can.Map(), "change")
+ * // => Event stream of change events
  *
  */
 can.bind = function(ev, cb) {
-  if (this instanceof bacon.Observable) {
-    return this;
-  } else if (cb) {
+  if (cb && can.isEventStream(this)) {
+    return can.onEventStreamValue(this, cb);
+  } else if (cb){
     return oldBind.apply(this, arguments);
   } else {
-    return toBaconObservable(this, ev);
+    return can.bindEventStream(this, ev);
   }
 };
 
@@ -44,7 +89,7 @@ var oldDelegate = can.delegate;
  * @function can.delegate
  *
  * Extends `can.delegate()` such that if it's called with only one or two
- * arguments (the selector, and the event name), a `Bacon.EventStream` object is
+ * arguments (the selector, and the event name), an `EventStream` object is
  * created, instead of binding a callback to the event.
  *
  * The actual event values sent into the `EventStream` will vary depending on
@@ -53,28 +98,25 @@ var oldDelegate = can.delegate;
  * See http://canjs.com/docs/can.delegate.html for documentation on the default
  * behavior.
  *
- * @param {Any} this - The object to bind events on. If this object is a
- *                     `Bacon.Observable`, `can.bind` is a no-op, returning
- *                     `this` immediately.
+ * @param {Any} this - The object to bind events on.
  * @param {Any} selector - The selector to delegate to.
  * @param {String} [event="change"] - Name of event to hook up to.
  * @param {Function} [callback] - Callback to invoke when event fires. If this
  *                                parameter is provided, the method will revert
- *                                to its default (non-`can.bacon`) behavior.
+ *                                to its default behavior.
  *
  * @returns EventStream | Any
  *
  * @example
- * can.delegate.call(window, "a", "click").doAction(".preventDefault").log();
+ * can.delegate.call(window, "a", "click")
+ * // => Event stream of click events on <a> elements.
  *
  */
 can.delegate = function(selector, ev, cb) {
-  if (this instanceof bacon.Observable) {
-    return this;
-  } else if (cb) {
+  if (cb) {
     return oldDelegate.apply(this, arguments);
   } else {
-    return toBaconObservable(this, ev, selector);
+    return can.bindEventStream(this, ev, selector);
   }
 };
 
@@ -89,7 +131,7 @@ can.delegate = function(selector, ev, cb) {
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
  *                                parameter is provided, the method will revert
- *                                to its default (non-`can.bacon`) behavior.
+ *                                to its default behavior.
  *
  * @returns EventStream | Computed
  *
@@ -107,7 +149,7 @@ var oldBindAndSetup = can.bindAndSetup;
 can.bindAndSetup = function(ev, cb) {
   return cb ?
     oldBindAndSetup.apply(this, arguments) :
-    toBaconObservable(this, ev);
+    can.bindEventStream(this, ev);
 };
 
 var oldControlOn = can.Control.prototype.on;
@@ -117,23 +159,23 @@ var oldControlOn = can.Control.prototype.on;
  * Enhances `can.Control#on` (and by extension, `can.Component#events#on`) so it
  * can be used to listen to event streams in a memory-safe way, according to the
  * control/component's lifecycle. The behavior of this method changes *only* if
- * the first argument is `instanceof Bacon.Observe`, in which case all other
- * arguments are ignored..
+ * `can.EventStream.isEventStream` returns true for the first argument, in which
+ * case, all other arguments are ignored.
  *
  * See http://canjs.com/docs/can.Control.prototype.on.html
  *
  *
  * @param {Any} [context=this.element] - The object to listen for events on. If
- *                                       this object is a `Bacon.Observable`,
- *                                       this method will immediately return a
- *                                       stream that ends automatically if the
- *                                       `this` (the Control or Component) is
+ *                                       this object is an `EventStream`, this
+ *                                       method will immediately return a stream
+ *                                       that ends automatically if the `this`
+ *                                       (the Control or Component) is
  *                                       destroyed.
  * @param {String} [selector] - If provided, the selector to delegate to.
  * @param {String} [event="change"] - The name of the event to listen to.
  * @param {Function} [callback] - Callback to invoke when event fires. If this
  *                                parameter is provided, the method will revert
- *                                to its default (non-`can.bacon`) behavior.
+ *                                to its default behavior.
  *
  * @returns EventStream | Observable | Number
  *
@@ -141,24 +183,25 @@ var oldControlOn = can.Control.prototype.on;
  * ...
  * events: {
  *   inserted: function() {
- *     this.on(GlobalStreams.specialEvent).log("special event:");
+ *     this.on(GlobalStreams.specialEvent)
+ *       .onValue((e) => console.log("special event: ", e);
  *   }
  * }
  * ...
- * $("mycomponent").remove() // logs 'special event: \<end\>'
+ * $("mycomponent").remove();
  * GlobalStreams.specialEvent.push("whatever"); // Nothing happens
  *
  * // The following are also equivalent:
- * this.on(scope, "change").log("Scope changed")
- * this.on(scope).log("Scope changed")
+ * this.on(scope, "change");
+ * this.on(scope);
  *
  */
 can.Control.prototype.on = function(ctx, selector, eventName, func) {
   if (!ctx) {
     return oldControlOn.apply(this, arguments);
   }
-  if (ctx instanceof bacon.Observable) {
-    return ctx.takeUntil(can.bind.call(this, "destroyed"));
+  if (can.isEventStream(ctx)) {
+    return can.eventStreamUntil(ctx, can.bind.call(this, "destroyed"));
   } else {
     return oldControlOn.apply(this, arguments);
   }
@@ -186,7 +229,7 @@ can.Control.prototype.on = function(ctx, selector, eventName, func) {
  *                 the removed value.
  * }
  *
- * Note that this object fits the API required for `Bacon.toCanMap`, so the
+ * Note that this object fits the API required for `can.toCanMap`, so the
  * `EventStream` returned by this function can be piped into a different
  * `can.Map` to partially or fully synchronise both maps.
  *
@@ -197,7 +240,7 @@ can.Control.prototype.on = function(ctx, selector, eventName, func) {
  * @param {String} [event="change"] - Name of event to hook up to
  * @param {Function} [callback] - Callback to invoke when event fires. If this
  *                                parameter is provided, the method will revert
- *                                to its default (non-`can.bacon`) behavior.
+ *                                to its default behavior.
  *
  * @returns EventStream | `this`
  *
@@ -226,7 +269,7 @@ can.Control.prototype.on = function(ctx, selector, eventName, func) {
  * // {x:2}, {x:2}
  */
 can.Map.prototype.bind = can.bindAndSetup;
-can.Map.prototype.getEventValueForBacon = function(args) {
+can.Map.prototype.getEventValueForStream = function(args) {
   switch (args[0] && args[0].type) {
   case "change":
     return new MapChangeEvent(args);
@@ -311,7 +354,7 @@ function MapChangeEvent(args) {
  * @returns EventStream | `this`
  *
  */
-can.List.prototype.getEventValueForBacon = function(args) {
+can.List.prototype.getEventValueForStream = function(args) {
   switch (args[0] && args[0].type) {
   case "change":
   case "set":
@@ -376,36 +419,142 @@ function ListChangeEvent(args) {
   }
 }
 
-function toBaconObservable(ctx, ev, selector) {
-  ev = ev == null ? "change" : ev;
-  var stream = bacon.fromBinder(function(sink) {
-    function cb() {
-      sink(new bacon.Next(chooseEventData(ctx, arguments)));
-    }
-    selector ?
-      can.delegate.call(ctx, selector, ev, cb) :
-      can.bind.call(ctx, ev, cb);
-    return ()=>selector ?
-      can.undelegate.call(ctx, selector, ev, cb) :
-      can.unbind.call(ctx, ev, cb);
-  });
-  if (ctx.isComputed) {
-    // Computes are a special case in the sense that it's fairly involved to set
-    // up a property, and we almost always want to bind computes as properties
-    // -- so in this specific case we return a property instead of a stream, to
-    // help sanity.
-    return stream.toProperty(ctx());
-  } else {
-    return stream;
-  }
+/**
+ * Returns a `can.compute` whose value changes whenever `stream` has a new value
+ * If a compute is provided, it will be used instead of creating a new one.
+ */
+can.bindComputeFromStream = function(stream, compute=can.compute()) {
+  can.onEventStreamValue(stream, compute);
+  return compute;
 };
 
-function chooseEventData(ctx, eventArgs, evName) {
-  if (ctx.isComputed) {
-    return eventArgs[1];
-  } else if (ctx.getEventValueForBacon) {
-    return ctx.getEventValueForBacon(eventArgs, evName);
+/**
+ * Returns a `can.Map` whose value is managed by a stream of incoming map change
+ * events.
+ *
+ * If `map` is provided, it *must* be a `can.Map` instance (or an instance of a
+ * subclass), which will be used instead of creating a new empty `can.Map`.
+ *
+ * Two kinds of event objects are accepted:
+ *
+ * @example
+ * // Modification event. Modifies a single key.
+ * {
+ *   how: "set"|"add"|"remove", // The type of operation.
+ *   which: String, // The key to modify.
+ *   value: Any, // The value to set. Optional for `remove`.
+ * }
+ *
+ * // Replacement event. Uses `.attr()` to replace multiple keys.
+ * {
+ *   how: "replace", // Must be this string.
+ *   value: Object, // Object to replace with.
+ *   removeOthers: Boolean // Passed to `.attr()`. See http://canjs.com/docs/can.Map.prototype.attr.html#sig_map_attr_obj__removeOthers__
+ * }
+ */
+can.bindMapFromStream = function(stream, map=new can.Map()) {
+  can.onEventStreamValue(stream, (ev) => syncAsMap(map, ev));
+  return map;
+};
+
+/**
+ * Returns a `can.List` whose value is managed by a stream of incoming list
+ * and/or map change events.
+ *
+ * If `list` is provided, it *must* be a `can.List` instance, which will be used
+ * instead of creating a new empty instance.
+ *
+ * Three kinds of event objects are accepted:
+ *
+ * @example
+ * // Modification event. Modifies a single index or key.
+ * {
+ *   how: "set"|"add"|"remove", // The type of operation.
+ *   which: String|Integer, // The key to modify.
+ *   value: Any, // The value to set. For "add" on an Integer index, must be an
+ *                  Array-like. Optional for `remove`.
+ * }
+ *
+ * // Replacement event. Calls `.replace()`
+ * {
+ *   how: "replace", // Must be this string.
+ *   value: Array-like, // Array-like to replace contents with.
+ *   removeOthers: Boolean=true (optional) // Whether to keep trailing elements
+ *                                            after value has been applied. If
+ *                                            this argument is provided, the
+ *                                            list will be replaced using
+ *                                            `.attr()`. Otherwise, `.replace()`
+ *                                            will be used. See:
+ *                                            http://canjs.com/docs/can.List.prototype.attr.html#sig_list_attr_elements__replaceCompletely__
+ * }
+ */
+can.bindListFromStream = function(stream, list=new can.List()) {
+  can.onEventStreamValue(stream, (ev) => syncAsList(list, ev));
+  return list;
+};
+
+function syncAsMap(map, val) {
+  var key = val.hasOwnProperty("which") ? val.which : val.index;
+  switch (val.how) {
+  case "set":
+    map.attr(key, val.value);
+    break;
+  case "add":
+    map.attr(key, val.value);
+    break;
+  case "remove":
+    map.removeAttr(key);
+    break;
+  case "replace":
+    map.attr(val.value, val.removeOthers);
+    break;
+  case undefined:
+    console.warn("Missing event type on change event: ", val);
+    map.attr(val);
+    break;
+  default:
+    console.warn("Unexpected event type: ", val.how);
+    // idk you're giving it to me so I'll shove it in. It's your own fault
+    // if it breaks. You voided the warranty. Be thankful for the log :)
+    map.attr(val);
+  }
+}
+
+function syncAsList(list, val) {
+  var isMapEvent = val.hasOwnProperty("which") || isNaN(val.index);
+  if (isMapEvent && val.how !== "replace") {
+    syncAsMap(list, val);
   } else {
-    return eventArgs[0];
+    switch (val.how) {
+    case "set":
+      list.attr(val.index, val.value);
+      break;
+    case "add":
+      // TODO - tag lists and/or events with some magical number (like.. a
+      // batchnum-style thing) to prevent circular additions when two-way
+      // binding. Please name it: "___PRAISE_THE_SUN___"
+      list.splice.apply(list, [val.index, 0].concat(val.value));
+      break;
+    case "remove":
+      list.splice(Math.min(val.index, !list.length?0:list.length-1),
+                  val.value ? val.value.length : 1);
+      break;
+    case "replace":
+      if (val.hasOwnProperty("removeOthers")) {
+        list.attr(val.value, val.removeOthers);
+      } else {
+        list.replace(val.value);
+      }
+      break;
+    case undefined:
+      console.warn("Missing event type on change event: ", val);
+      list.replace(val.value);
+      break;
+    default:
+      console.warn("Unexpected event type: ", val.how);
+      // idk you're giving it to me so I'll shove it in. It's your own fault
+      // if it breaks. You voided the warranty. Be thankful for the log :)
+      list.replace(val.value);
+    }
   }
 }

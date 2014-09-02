@@ -20,6 +20,11 @@ module.exports = function(grunt) {
           path: __dirname + "/dist/",
           filename: "[name].js"
         },
+        resolve: {
+          alias: {
+            "can/eventstream": "./can.js"
+          }
+        },
         externals: {
           can: "umd can",
           jquery: {
