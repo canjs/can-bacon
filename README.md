@@ -46,7 +46,7 @@ property.log("Property has new value:");
 
 compute(1);
 
-property.toCanCompute().bind("change", function() {
+property.toCompute().bind("change", function() {
   console.log("compute updated from property change.");
 });
 
@@ -65,23 +65,23 @@ with the current value of the `can.compute` as its initial value.
 `can.bacon` also extends `Bacon.Observable.prototype` with a few utility methods
 that directly wrap `can.eventstream` functions, documented below.
 
-### `Bacon.Observable#toCanCompute([compute=can.compute()])`
+### `Bacon.Observable#toCompute([compute=can.compute()])`
 
 Wraps `can.bindComputeFromStream`.
 
-`stream.toCanCompute(compute)` is the same as `can.bindComputeFromStream(stream,
+`stream.toCompute(compute)` is the same as `can.bindComputeFromStream(stream,
 compute);`
 
-### `Bacon.Observable#toCanMap([map=new can.Map()])`
+### `Bacon.Observable#toMap([map=new can.Map()])`
 
 Wraps `can.bindMapFromStream`.
 
-`stream.toCanMap(compute)` is the same as `can.bindMapFromStream(stream,
+`stream.toMap(compute)` is the same as `can.bindMapFromStream(stream,
 compute);`
 
-### `Bacon.Observable#toCanList([list=new can.List()])`
+### `Bacon.Observable#toList([list=new can.List()])`
 
 Wraps `can.bindListFromStream`.
 
-`stream.toCanList(compute)` is the same as `can.bindListFromStream(stream,
+`stream.toList(compute)` is the same as `can.bindListFromStream(stream,
 compute);`

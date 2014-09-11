@@ -5,30 +5,30 @@ import "can.eventstream";
 /**
  * Wraps `can.bindComputeFromStream`.
  *
- * `stream.toCanCompute(compute)` is the same as
+ * `stream.toCompute(compute)` is the same as
  * `can.bindComputeFromStream(stream, compute);`
  */
-bacon.Observable.prototype.toCanCompute = function(compute=can.compute()) {
+bacon.Observable.prototype.toCompute = function(compute=can.compute()) {
   return can.bindComputeFromStream(this, compute);
 };
 
 /**
  * Wraps `can.bindMapFromStream`.
  *
- * `stream.toCanMap(compute)` is the same as
+ * `stream.toMap(compute)` is the same as
  * `can.bindMapFromStream(stream, compute);`
  */
-bacon.Observable.prototype.toCanMap = function(map=new can.Map()) {
+bacon.Observable.prototype.toMap = function(map=new can.Map()) {
   return can.bindMapFromStream(this, map);
 };
 
 /**
  * Wraps `can.bindListFromStream`.
  *
- * `stream.toCanList(compute)` is the same as
+ * `stream.toList(compute)` is the same as
  * `can.bindListFromStream(stream, compute);`
  */
-bacon.Observable.prototype.toCanList = function(list=new can.List()) {
+bacon.Observable.prototype.toList = function(list=new can.List()) {
   return can.bindListFromStream(this, list);
 };
 
