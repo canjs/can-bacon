@@ -59,25 +59,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	var bacon = __webpack_require__(1);
 	var can = __webpack_require__(2);
 	__webpack_require__(3);
-	bacon.Observable.prototype.toCanCompute = function() {
+	bacon.Observable.prototype.toCompute = function() {
 	  var compute = arguments[0] !== (void 0) ? arguments[0] : can.compute();
 	  return can.bindComputeFromStream(this, compute);
 	};
-	bacon.Observable.prototype.toCanMap = function() {
+	bacon.Observable.prototype.toMap = function() {
 	  var map = arguments[0] !== (void 0) ? arguments[0] : new can.Map();
 	  return can.bindMapFromStream(this, map);
 	};
-	bacon.Observable.prototype.toCanList = function() {
+	bacon.Observable.prototype.toList = function() {
 	  var list = arguments[0] !== (void 0) ? arguments[0] : new can.List();
 	  return can.bindListFromStream(this, list);
 	};
-	can.isEventStream = (function(stream) {
+	can.EventStream = {};
+	can.EventStream.isEventStream = (function(stream) {
 	  return stream instanceof bacon.Observable;
 	});
-	can.onEventStreamValue = (function(stream, callback) {
+	can.EventStream.onValue = (function(stream, callback) {
 	  return stream.onValue(callback);
 	});
-	can.bindEventStream = function(ctx, ev, selector) {
+	can.EventStream.bind = function(ctx, ev, selector) {
 	  ev = ev == null ? "change" : ev;
 	  var stream = bacon.fromBinder(function(sink) {
 	    function cb() {
@@ -93,7 +94,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	  return stream;
 	};
-	can.eventStreamUntil = (function(stream, until) {
+	can.EventStream.untilStream = (function(stream, until) {
 	  return stream.takeUntil(until);
 	});
 	function chooseEventData(ctx, eventArgs, evName) {
