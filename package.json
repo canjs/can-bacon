@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/zkat/can.bacon"
+    "url": "git://github.com/bitovi/can.bacon"
   },
   "keywords": [
     "bacon",
@@ -20,9 +20,9 @@
   "author": "Kat Marchán <kzm@sykosomatic.org>",
   "license": "CC0",
   "bugs": {
-    "url": "https://github.com/zkat/can.bacon/issues"
+    "url": "https://github.com/bitovi/can.bacon/issues"
   },
-  "homepage": "https://github.com/zkat/can.bacon",
+  "homepage": "https://github.com/bitovi/can.bacon",
   "dependencies": {
     "canjs": "~2",
     "baconjs": "^0.7.13",
