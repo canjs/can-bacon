@@ -9,7 +9,7 @@ canned-bacon-flavored mix of
 `CanJS`-style declarative MVC.
 
 `can.bacon` implements the
-[can.eventstream](https://github.com/zkat/can.eventstream) interface and
+[can.eventstream](https://github.com/bitovi/can.eventstream) interface and
 adds a few methods to `Bacon` objects (documented below). For information on the
 `CanJS` side of the interface, please refer to `can.eventstream`'s documentation.
 
@@ -19,7 +19,7 @@ super-simple, single-line two-way binding between pairs of computes and pairs of
 `can.Map`s.
 
 `can.bacon` is
-[hosted at Github](http://github.com/zkat/can.bacon). `can.bacon` is a
+[hosted at Github](http://github.com/bitovi/can.bacon). `can.bacon` is a
 public domain work, dedicated using
 [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Feel free to do
 whatever you want with it.
