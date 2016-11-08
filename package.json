@@ -29,15 +29,15 @@
     "can.eventstream": "^0.2.0"
   },
   "devDependencies": {
-    "grunt": "^0.4.5",
+    "grunt": "^1.0.1",
     "webpack": "^1.1.11",
     "webpack-dev-server": "^1.2.7",
     "grunt-webpack": "^1.0.6",
-    "grunt-mocha-test": "^0.10.2",
+    "grunt-mocha-test": "^0.13.2",
     "execSync": "^1.0.1-pre",
     "transform-loader": "^0.2.0",
     "bacon-browser": "0.0.5",
-    "es6ify": "1.1.0",
-    "jquery": "^2.1.1"
+    "es6ify": "1.6.0",
+    "jquery": "^3.1.1"
   }
 }
