@@ -1,4 +1,7 @@
-# can.bacon
+# NOT MAINTAINED! This project is abandoned,
+
+
+## can.bacon
 
 `can.bacon` is a [CanJS](https://github.com/bitovi/canjs) plugin that lets you
 create [Bacon.js](https://github.com/baconjs/bacon.js) `EventStream`s and
